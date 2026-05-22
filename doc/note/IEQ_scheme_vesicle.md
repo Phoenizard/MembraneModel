@@ -1095,29 +1095,95 @@ $$
 
 #### 5.6.2 常系数隐式 + 变系数显式劈分
 
-**【标记：FFT 对角化关键步骤】** 5.2、5.5 节的隐式算子（$\mathcal A^n_E,\mathcal A^n_L,\mathcal B^n_L$ 等）含变系数（$a(\eta^n)^2,\Phi_\eta,W(\phi^{n+1}),1/r^n,\nabla\phi^n$ 等随空间变化），变系数算子在谱空间非对角，不能逐波数求逆。
+**【标记：FFT 对角化关键步骤】** 5.2、5.5 节的隐式算子含变系数（$a(\eta^n)^2,\Phi_\eta,W(\phi^{n+1}),1/r^n,\nabla\phi^n$ 等随空间变化），变系数算子在谱空间非对角，不能逐波数求逆。
 
-处理：将变系数劈为常数代表值加余项，常数部分隐式（谱对角）、余项显式入右端。以弯曲项最高阶为例，$\mathcal A^n_E$ 主部含 $a(\eta^n)^2\epsilon^2\Delta^2$，取常数 $\bar a^2$，
+**关键观察：只有两个算子进对角符号，其余皆为秩一。** 由 5.2／5.5 的算子定义：
+
+- $\phi$-子步 LHS $=(\tfrac1\tau+\sigma)\mathcal I+\mathcal A^n_E+\mathcal A^n_L+\mathcal A^n_A+\mathcal A^n_D+\mathcal A^n_N+\mathcal A^n_V$。其中**只有 $\mathcal A^n_E$（弯曲，$\mathcal C^*_q\mathcal C_q$ 型）与 $\mathcal A^n_L$（线张力，$\mathcal C^*_r\Phi_\eta\mathcal C_r$ 型）是微分算子**，进对角符号 $\widehat{\mathcal L}(\mathbf k)$；$\mathcal A^n_A,\mathcal A^n_D,\mathcal A^n_N$（$M\,e\!\otimes\!e$）与 $\mathcal A^n_V$（$M_1\,\mathbf 1\!\otimes\!\mathbf 1$）为半正定秩一算子，**不进 $\widehat{\mathcal L}$，统一用 Woodbury 修正**（见 (e)）。
+- $\eta$-子步 LHS $=(\tfrac1\tau+\sigma)\mathcal I+\mathcal B^n_L+\mathcal B^n_D+\mathcal B^n_N+\mathcal B^n_P$。只有 $\mathcal B^n_L$（线张力，含扩散主部 + 零阶项）是微分算子，进 $\widehat{\mathcal M}(\mathbf k)$；$\mathcal B^n_D,\mathcal B^n_N,\mathcal B^n_P$ 为秩一，走 Woodbury。
+
+**(a) 劈分原则。** 微分算子 $\mathcal O$ 作用于新层场，劈成常系数骨架 $\mathcal S$（谱对角，隐式）+ 余项 $(\mathcal O-\mathcal S)$（取旧层场，显式入右端）：
 
 $$
-a(\eta^n)^2\epsilon^2\Delta^2\psi
-=\underbrace{\bar a^2\epsilon^2\Delta^2\psi^{n+1}}_{\text{常系数，隐式}}
-+\underbrace{\big(a(\eta^n)^2-\bar a^2\big)\epsilon^2\Delta^2\psi^n}_{\text{变系数余项，显式入右端}}.
+\mathcal O[\phi^{n+1}]=\mathcal S[\phi^{n+1}]+(\mathcal O-\mathcal S)[\phi^{n+1}]
+\approx \mathcal S[\phi^{n+1}]+(\mathcal O-\mathcal S)[\phi^{n}],
 $$
 
-其余隐式算子（$\mathcal A^n_L,\mathcal B^n_L$ 等）同此处理；秩一算子 $\mathcal A^n_A,\mathcal A^n_D,\dots$ 为非局部低秩项，可直接在谱空间作低秩更新（Sherman–Morrison）或并入迭代。常数代表值（$\bar a^2$ 等）取法——空间均值或上界——为待标定量。
+余项 $-(\mathcal O-\mathcal S)[\phi^n]$ 入右端 $\mathcal R^n_\phi$。滞后到旧层引入 $O(\tau)$ 误差，由 5.6.4 末的不动点／CG 迭代细化；小 $\tau$ 下可直接显式。
+
+**(b) $\mathcal A^n_E$ 的骨架（完全平方，自动非负）。** $\mathcal C_q[\psi]=a(\eta^n)\big(\epsilon\Delta\psi+g'(\phi^n)\psi\big)$，变系数 $a^2=k(\eta^n)/\epsilon$、$g'(\phi^n)=\tfrac1\epsilon(1-3(\phi^n)^2)$。冻结常数代表 $\bar a^2,\bar g'$，骨架
+
+$$
+\mathcal S_E=\bar a^2\big(\epsilon\Delta+\bar g'\big)^2\qquad(\text{自伴：}\epsilon\Delta\text{ 与乘 }\bar g'\text{ 均自伴}),
+$$
+
+谱符号（$\Delta\to-|\mathbf k|^2$）
+
+$$
+\boxed{\ \widehat{\mathcal S}_E(\mathbf k)=\bar a^2\big(\epsilon|\mathbf k|^2-\bar g'\big)^2\ \ge 0\ }
+$$
+
+保留为**完全平方**而非展开，符号自动非负，无需顾虑交叉项 $-2\epsilon\bar g'|\mathbf k|^2$ 的符号。
+
+**(c) $\mathcal A^n_L$ 的骨架（各向异性 → 各向同性上界）。** $\mathcal C_r[\psi]=\tfrac1{r^n}\big(\epsilon\nabla\phi^n\cdot\nabla\psi+\tfrac1\epsilon\phi^n((\phi^n)^2-1)\psi\big)$，$\mathcal A^n_L=\mathcal C^*_r(\Phi_\eta\mathcal C_r)$ 主部为二阶各向异性算子：
+
+$$
+\mathcal A^n_L[\psi]\approx-\epsilon^2\,\nabla\!\cdot\!\Big(\tfrac{\Phi_\eta}{(r^n)^2}(\nabla\phi^n\cdot\nabla\psi)\,\nabla\phi^n\Big),
+\qquad\text{符号 }\ \epsilon^2\tfrac{\Phi_\eta}{(r^n)^2}(\nabla\phi^n\cdot\mathbf k)^2 .
+$$
+
+用 $(\nabla\phi^n\cdot\mathbf k)^2\le|\nabla\phi^n|^2|\mathbf k|^2$ 取各向同性上界骨架：
+
+$$
+\boxed{\ \mathcal S_L=b_L(-\Delta),\quad b_L=\epsilon^2\,\mathrm{rep}\!\Big(\tfrac{\Phi_\eta|\nabla\phi^n|^2}{(r^n)^2}\Big),
+\qquad\text{符号 }\ b_L|\mathbf k|^2\ge 0\ }
+$$
+
+$\mathcal A^n_L$ 的低阶部分（来自 $\mathcal C_r$ 中 $\tfrac1\epsilon\phi(\phi^2-1)$ 项）全归入余项显式。$\mathrm{rep}(\cdot)$ 取空间均值或上界（列 5.8）；$\Phi_\eta>0$、$(r^n)^2\ge C_0>0$ 保证 $b_L\ge 0$ 良定义。
+
+**(d) $\mathcal B^n_L$ 的骨架（$\eta$-子步）。** $\mathcal B^n_L[\psi]=-\delta\xi\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\psi\big)+\delta\tfrac1\xi W(\phi^{n+1})\zeta^n\psi$，$\zeta^n=(\eta^n)^2-1$。冻结 $\bar W,\bar\zeta$：
+
+$$
+\boxed{\ \mathcal S^\eta_L=-\delta\xi\bar W\Delta+\delta\tfrac1\xi\bar W\bar\zeta\,\mathcal I,
+\qquad\text{符号 }\ \delta\xi\bar W|\mathbf k|^2+\delta\tfrac1\xi\bar W\bar\zeta\ }
+$$
+
+零阶常数 $\delta\tfrac1\xi\bar W\bar\zeta$ 可负（$\bar\zeta<0$）→ 由 $\sigma$ 压住（见 5.6.3 的 $\widehat{\mathcal M}$ 正性条件）。
+
+**(e) 秩一项：Woodbury。** 把全部秩一算子合写为 $\mathcal O_{\text{LHS}}=\mathcal D+\sum_j\alpha_j\,u_j u_j^{\!\top}$，其中 $\mathcal D$ 为对角 FFT 算子（符号 $\widehat{\mathcal L}(\mathbf k)$ 或 $\widehat{\mathcal M}(\mathbf k)$），$u_j$ 为秩一向量（$\phi$：$e^n_A,e^n_D,e^n_N$ 与体积约束的 $\mathbf 1$；$\eta$：$f^n_D,e^n_{N\eta},e^n_P$），$\alpha_j\ge0$。由 Woodbury 公式
+
+$$
+\boxed{\ (\mathcal D+U\alpha U^{\!\top})^{-1}\mathcal R
+=\mathcal D^{-1}\mathcal R-\mathcal D^{-1}U\big(\alpha^{-1}+U^{\!\top}\mathcal D^{-1}U\big)^{-1}U^{\!\top}\mathcal D^{-1}\mathcal R\ }
+$$
+
+每子步代价：$m+1$ 次 FFT-divide（$m=4$ 或 $3$）+ 一个 $m\times m$ 稠密小解。体积约束 $\mathcal A^n_V$ 的 $u=\mathbf 1$ 自然并入此批（$\mathbf 1$ 在谱空间仅零波数非零，与"零波数单独解"等价）。
 
 #### 5.6.3 隐式骨架谱符号
 
-经劈分，$\phi$-子步常系数隐式骨架谱符号
+综合 (b)(c)(d)，常系数隐式骨架谱符号
 
 $$
-\widehat{\mathcal L}(\mathbf k)=\frac1\tau+\sigma+\bar a^2\epsilon^2|\mathbf k|^4+(\text{低阶常系数项})>0 .
+\boxed{\ \widehat{\mathcal L}(\mathbf k)=\frac1\tau+\sigma+\bar a^2\big(\epsilon|\mathbf k|^2-\bar g'\big)^2+b_L|\mathbf k|^2\ }
 $$
 
-$\tfrac1\tau+\sigma>0$ 与最高阶 $\bar a^2\epsilon^2|\mathbf k|^4\ge0$ 保证 $\widehat{\mathcal L}(\mathbf k)>0$ 对所有 $\mathbf k$；可变号的罚项二阶项已显式入右端（5.3），不影响 $\widehat{\mathcal L}$ 正性。$\eta$-子步同构，记 $\widehat{\mathcal M}(\mathbf k)>0$；其中 $\mathcal B^n_L$ 可变号零阶项的常数代表值若为负，由 $\sigma$ 保证 $\widehat{\mathcal M}>0$（$\sigma$ 取足够大）。
+$$
+\boxed{\ \widehat{\mathcal M}(\mathbf k)=\frac1\tau+\sigma+\delta\xi\bar W|\mathbf k|^2+\delta\tfrac1\xi\bar W\bar\zeta\ }
+$$
 
-体积约束秩一算子 $\mathcal A^n_V$ 仅作用零波数 $\mathbf k=\mathbf0$，单独处理。
+**$\widehat{\mathcal L}$ 正性（无条件）。** 三项 $\bar a^2(\epsilon|\mathbf k|^2-\bar g')^2\ge0$、$b_L|\mathbf k|^2\ge0$、$\tfrac1\tau+\sigma>0$ ⇒ $\widehat{\mathcal L}(\mathbf k)>0$ 对所有 $\mathbf k$ 成立。可变号的罚项二阶项已显式入右端（5.3），不进 $\widehat{\mathcal L}$。
+
+**$\widehat{\mathcal M}$ 正性（给出 $\sigma$ 下界）。** 扩散主部 $\delta\xi\bar W|\mathbf k|^2\ge0$；零阶常数 $\delta\tfrac1\xi\bar W\bar\zeta$ 在 $\bar\zeta<0$ 时为负。最坏情形在 $\mathbf k=\mathbf 0$，故正性条件为
+
+$$
+\frac1\tau+\sigma+\delta\tfrac1\xi\bar W\bar\zeta>0
+\quad\Longleftrightarrow\quad
+\boxed{\ \sigma>\frac{\delta\bar W|\bar\zeta|}{\xi}-\frac1\tau\quad(\bar\zeta<0)\ }
+$$
+
+即 $\sigma\gtrsim\dfrac{\delta\bar W|\bar\zeta|}{\xi}$。这给了 $\sigma$ 的解析下界（5.8 标定时据此取起点，$\bar W$ 取上界更保险）。
+
+体积约束秩一算子 $\mathcal A^n_V$ 已并入 (e) 的 Woodbury 批，不再单独处理。
 
 #### 5.6.4 求解步骤（每时间步）
 
@@ -1125,7 +1191,7 @@ $\phi$-子步：
 
 1. 实空间计算冻结系数与显式项（含 5.6.2 变系数余项、5.3 罚项二阶显式项），组装右端 $\mathcal R^n_\phi$；
 2. FFT 得 $\widehat{\mathcal R^n_\phi}$；
-3. 非零波数逐波数求逆 $\widehat{\phi^{n+1}}_{\mathbf k}=\widehat{\mathcal R^n_\phi}_{\mathbf k}/\widehat{\mathcal L}(\mathbf k)$；秩一项 $\mathcal A^n_V$ 等用 Sherman–Morrison 低秩修正；零波数单独解；
+3. 逐波数求逆 $\widehat{\phi^{n+1}}_{\mathbf k}=\widehat{\mathcal R^n_\phi}_{\mathbf k}/\widehat{\mathcal L}(\mathbf k)$（即 $\mathcal D^{-1}\mathcal R$），再对全部秩一项（$\mathcal A^n_A,\mathcal A^n_D,\mathcal A^n_N$ 及体积约束 $\mathcal A^n_V$）作 5.6.2(e) 的 Woodbury 批量修正；
 4. IFFT 得 $\phi^{n+1}$；
 5. 由 (5.1a)(5.1b)(5.1c) 更新 $q^{n+1},r^{n+1},\mathbf s^{n+1}$。
 
@@ -1180,12 +1246,11 @@ for n = 0,1,2,... :
 以下为推导中引入、需数值实验确定的量，非推导结论：
 
 - 正则常数 $C_0>0$（5.1b 中 $1/r^n$ 的下界由 $\sqrt{C_0}$ 控制）；
-- Eyre 稳定化常数 $\sigma>0$（D5；$\eta$-子步 $\mathcal B^n_L$ 负零阶项的正性补偿亦依赖 $\sigma$）；
-- 常系数劈分（5.6.2）中常数代表值 $\bar a^2$ 等的取法（均值 / 上界 / 其它）；
+- Eyre 稳定化常数 $\sigma>0$（D5）；其下界由 5.6.3 给出 $\sigma\gtrsim\delta\bar W|\bar\zeta|/\xi$（保 $\widehat{\mathcal M}>0$），标定时以此为起点；
+- 常系数劈分（5.6.2）中各代表值的取法（均值 / 上界 / 其它）：弯曲 $\bar a^2,\bar g'$；线张力 $b_L=\epsilon^2\,\mathrm{rep}(\Phi_\eta|\nabla\phi^n|^2/(r^n)^2)$；$\eta$-子步 $\bar W,\bar\zeta$。$\widehat{\mathcal M}$ 零阶项为负时 $\bar W$ 取上界更保险；
 - 时间步 $\tau$ 的实际可用范围；
 - 罚因子 $M_i$ 的初值、放大比 $\rho$ 与目标容差；
-- Newton 线性化中是否需对 $\mathcal B^n_L$ 可变号零阶项作额外稳定化；
-- 是否需对变系数项改用预条件迭代（5.6.4 末）。
+- 各向同性上界骨架 $\mathcal S_L=b_L(-\Delta)$（5.6.2c）的余项是否过大、是否需改用预条件 CG（5.6.4 末）保留各向异性。
 
 ### 5.9 说明
 
