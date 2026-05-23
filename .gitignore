@@ -37,6 +37,9 @@ venv/
 env/
 ENV/
 
+# 实验输出目录
+experiments/**/out/
+
 # 数值实验产物（大文件，按需保留可在子目录单独 !whitelist）
 *.npy
 *.npz
