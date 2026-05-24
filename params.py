@@ -1,4 +1,4 @@
-"""Model + scheme parameters. Stage A uses the phi-side subset (c=0)."""
+"""Model + scheme parameters for the two-component vesicle (c=0 => k constant)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from dataclasses import dataclass
 class Params:
     # interface width (xi = eps)
     eps: float = 0.1964
-    # bending stiffness k(eta) = k + c*tanh(eta/xi); Stage A: c=0 -> k const
+    # bending stiffness k(eta) = k + c*tanh(eta/xi); c=0 -> k constant
     k: float = 1.0
     c: float = 0.0
-    # line tension (unused in Stage A, no eta)
+    # line tension (delta)
     delta: float = 10.0
     # constraints
     v_d: float = -216.52

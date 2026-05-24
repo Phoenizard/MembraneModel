@@ -1,16 +1,17 @@
-"""Initial conditions. Stage A: a single spherical vesicle.
+"""Initial conditions: a spherical vesicle (phi) + an up/down two-phase split (eta).
 
 phi^0 = tanh((R - |x|)/(sqrt2 eps)),  phi=+1 inside |x|<R.
 Radius from the volume target:  |Omega_i| = (|Omega| + v_d)/2,
 R = (3 |Omega_i| / 4pi)^(1/3).
+eta^0 = tanh(z/(sqrt2 eps))  (two phases of ~equal area, D ~ 0).
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-from .discretization.grid import SpectralGrid
-from .params import Params
+from discretization.grid import SpectralGrid
+from params import Params
 
 
 def sphere_radius_from_vd(grid: SpectralGrid, p: Params) -> float:

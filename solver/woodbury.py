@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..discretization.grid import SpectralGrid
+from discretization.grid import SpectralGrid
 
 
 def solve(grid: SpectralGrid, Lhat: np.ndarray, b: np.ndarray, us, alphas) -> np.ndarray:

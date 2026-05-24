@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from membrane import SpectralGrid
+from discretization.grid import SpectralGrid
 
 
 def test_laplacian_eigenmode():

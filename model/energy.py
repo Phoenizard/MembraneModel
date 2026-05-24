@@ -1,7 +1,7 @@
 """Full two-component energy E_M(phi, eta) and the variational derivatives
 delta E_M/delta phi (doc 4.1.7) and delta E_M/delta eta (doc 4.2.6).
 
-Reuses the densities g, g', W from energy.py. eta enters via
+Reuses the densities g, g', W from fields.py. eta enters via
     k(eta)   = k + c tanh(eta/xi)        bending stiffness
     Phi_eta  = delta((xi/2)|grad eta|^2 + (1/4xi)(eta^2-1)^2)
     Pi(eta)  = (xi/2)|grad eta|^2 - (1/4xi)(eta^2-1)^2
@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..discretization.grid import SpectralGrid
-from ..params import Params
-from .energy import g, gp, W_density, curvature
+from discretization.grid import SpectralGrid
+from params import Params
+from .fields import g, gp, W_density, curvature
 
 
 # --- eta-dependent coefficients ---

@@ -37,8 +37,10 @@ venv/
 env/
 ENV/
 
-# 实验输出目录
+# 实验输出目录 + 仓库内临时测试目录
 experiments/**/out/
+scratch/
+wandb/
 
 # 数值实验产物（大文件，按需保留可在子目录单独 !whitelist）
 *.npy

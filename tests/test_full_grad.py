@@ -5,8 +5,9 @@ match finite differences. Term-isolation configs pinpoint any wrong term.
 import numpy as np
 import pytest
 
-from membrane import SpectralGrid, Params
-from membrane.model import full
+from discretization.grid import SpectralGrid
+from params import Params
+from model import energy
 
 
 def _fields(g):
@@ -16,11 +17,11 @@ def _fields(g):
 
 
 def _fd_phi(phi, eta, g, p, u, h=1e-5):
-    return (full.E_total(phi + h * u, eta, g, p) - full.E_total(phi - h * u, eta, g, p)) / (2 * h)
+    return (energy.E_total(phi + h * u, eta, g, p) - energy.E_total(phi - h * u, eta, g, p)) / (2 * h)
 
 
 def _fd_eta(phi, eta, g, p, w, h=1e-5):
-    return (full.E_total(phi, eta + h * w, g, p) - full.E_total(phi, eta - h * w, g, p)) / (2 * h)
+    return (energy.E_total(phi, eta + h * w, g, p) - energy.E_total(phi, eta - h * w, g, p)) / (2 * h)
 
 
 # Term-isolation parameter sets: zero out everything except the term under test.
@@ -44,7 +45,7 @@ def test_dEM_dphi(name):
     p = Params(eps=0.3, v_d=-50.0, a_0=20.0, a_d=1.5, **CASES[name])
     phi, eta = _fields(g)
     u = np.sin(g.X + 0.7) * np.cos(g.Y - 0.3) * np.cos(g.Z + 0.2)
-    analytic = g.inner(full.dEM_dphi(phi, eta, g, p), u)
+    analytic = g.inner(energy.dEM_dphi(phi, eta, g, p), u)
     fd = _fd_phi(phi, eta, g, p, u)
     assert abs(fd - analytic) <= 1e-5 * (1.0 + abs(analytic)) + 1e-9, name
 
@@ -55,6 +56,6 @@ def test_dEM_deta(name):
     p = Params(eps=0.3, v_d=-50.0, a_0=20.0, a_d=1.5, **CASES[name])
     phi, eta = _fields(g)
     w = np.cos(g.X - 0.2) * np.sin(g.Y + 0.5) * np.cos(g.Z)
-    analytic = g.inner(full.dEM_deta(phi, eta, g, p), w)
+    analytic = g.inner(energy.dEM_deta(phi, eta, g, p), w)
     fd = _fd_eta(phi, eta, g, p, w)
     assert abs(fd - analytic) <= 1e-5 * (1.0 + abs(analytic)) + 1e-9, name
