@@ -140,7 +140,7 @@ $$
 
 格式约定：
 - **D1** 辅助变量 $n+1$ 层隐式，由 §3.1 演化式回代消元。
-- **D4** 罚项 $\tfrac{M_j}2(C_j-c_j)^2$ 外层标量作 Newton 线性化，仅半正定 Hessian 主项进 LHS，可变号二阶项显式入右端。
+- **D4** 罚项 $\tfrac{M_j}2(C_j-c_j)^2$ 外层标量作 Newton 线性化，仅半正定 Hessian 主项进 LHS，可变号二阶项整项丢弃（Gauss–Newton）；右端只放旧层精确负梯度。
 - **D5** 双井项 Eyre 凸劈分 + 稳定化常数 $\sigma>0$。
 
 ### §4.1 $\phi$-子步
@@ -170,7 +170,8 @@ $$
 伴随算子（分部积分，周期边界，D6）：
 
 $$
-(\mathcal C^n_q)^*=\mathcal C^n_q\quad(\text{自伴}),\qquad
+(\mathcal C^n_q)^*[h]=\epsilon\Delta\big(a(\eta^n)\,h\big)+g'(\phi^n)\,a(\eta^n)\,h,
+\qquad
 (\mathcal C^n_s)^*[h]=-\sqrt\epsilon\,\nabla\!\cdot\!(h\,\nabla\eta^n)
 $$
 
@@ -178,43 +179,44 @@ $$
 (\mathcal C^n_r)^*[h]=-\epsilon\,\nabla\!\cdot\!\big(\tfrac h{r^n}\nabla\phi^n\big)+\tfrac1{\epsilon r^n}\phi^n((\phi^n)^2-1)\,h
 $$
 
-右端 $\mathcal R^n_\phi$ 收集全部显式项：
+> 注：$\mathcal C^n_q[\psi]=a(\eta^n)(\epsilon\Delta\psi+g'\psi)$ 的乘子 $a(\eta^n)$ 在最外层左侧，伴随规则 $(M_a\circ\mathcal L)^*=\mathcal L^*\circ M_a$ 使 $a$ 移入 $\Delta$ 内：$(\mathcal C^n_q)^*[h]=\epsilon\Delta(a\,h)+g'a\,h\ne\mathcal C^n_q[h]$（因 $\Delta(ah)\ne a\Delta h$，差 $2\nabla a\cdot\nabla h+h\Delta a$）。仅 $a$ 为常数（$c=0$，单组分）时才自伴。自洽检验：$(\mathcal C^n_q)^*[q]=\epsilon\Delta(aq)+g'aq$ 恰为 §2.1 弯曲项变分导数。
+
+右端 $\mathcal R^n_\phi$ —— **增量形式下，右端就是旧层精确负梯度**：
+
+$$
+\boxed{\;\mathcal R^n_\phi=-\Big(\frac{\delta\mathcal E_M}{\delta\phi}\Big)(\phi^n,\eta^n)\;}
+$$
+
+展开（即 §2.1 在旧层取负，弯曲/线张力项用存储的辅助变量旧值 $q^n,r^n$）：
 
 $$
 \begin{aligned}
-\mathcal R^n_\phi=\;&\big(\tfrac1\tau+\sigma\big)\phi^n
--(\mathcal C^n_q)^*[q^n]
--(\mathcal C^n_r)^*[\Phi_\eta\,r^n]\\
-&+M_1 v_d\\
-&-\mathcal T^n_A-\mathcal T^n_D-\mathcal T^n_N\\
-&-(\mathcal O-\mathcal S)[\phi^n]\quad(\text{变系数余项，}\mathcal O=\mathcal A^n_E+\mathcal A^n_L\text{ 的非骨架部分，见 §5.2})
+\mathcal R^n_\phi=\;&-(\mathcal C^n_q)^*[q^n]-(\mathcal C^n_r)^*[\Phi_\eta\,r^n]\\
+&-M_1(V^n-v_d)\\
+&-M_2(A^n-a_0)\Big(\tfrac{\delta A}{\delta\phi}\Big)^n
+-M_3(D^n-a_d)\Big(\tfrac{\delta D}{\delta\phi}\Big)^n\\
+&+M_4 N^n\,\epsilon\,\nabla\!\cdot\!\big((\nabla\phi^n\cdot\nabla\eta^n)\nabla\eta^n\big)
 \end{aligned}
 $$
 
-其中 $\mathcal T^n_A,\mathcal T^n_D,\mathcal T^n_N$ 为 Newton 线性化产生的二阶显式项（D4）。罚项 $\tfrac{M_j}2(C_j-c_j)^2$ 的 Hessian 为 $M_j(\mathrm dC_j)\otimes(\mathrm dC_j)+M_j(C_j-c_j)\mathrm d^2C_j$；第一项（半正定秩一）进 LHS，第二项 $M_j(C_j^n-c_j)\mathrm d^2C_j$ 取旧层显式入右端，即 $\mathcal T^n$。逐项写出（$\mathrm d^2C_j$ 作用在 $\phi^n$ 上）：
-
-**面积** $A=\int W(\phi)dx$，$\mathrm d^2A$ 的密度为 $-\epsilon\Delta+\tfrac1\epsilon(3\phi^2-1)$：
+其中罚项的旧层精确梯度密度：
 
 $$
-\mathcal T^n_A=M_2(A^n-a_0)\Big(-\epsilon\Delta\phi^n+\tfrac1\epsilon\big(3(\phi^n)^2-1\big)\phi^n\Big)
+\Big(\tfrac{\delta A}{\delta\phi}\Big)^n=-\epsilon\Delta\phi^n+\tfrac1\epsilon\big((\phi^n)^3-\phi^n\big)
 $$
 
-**面积差** $D=\int\tanh(\eta^n/\xi)W(\phi)dx$，$\tanh(\eta^n/\xi)$ 为冻结权重：
-
 $$
-\mathcal T^n_D=M_3(D^n-a_d)\Big(-\epsilon\nabla\!\cdot\!\big(\tanh(\eta^n/\xi)\nabla\phi^n\big)
-+\tfrac1\epsilon\big(3(\phi^n)^2-1\big)\phi^n\tanh(\eta^n/\xi)\Big)
+\Big(\tfrac{\delta D}{\delta\phi}\Big)^n=-\epsilon\nabla\!\cdot\!\big(\tanh(\eta^n/\xi)\nabla\phi^n\big)
++\tfrac1\epsilon\big((\phi^n)^3-\phi^n\big)\tanh(\eta^n/\xi)
 $$
 
-**正交** $N=\tfrac\epsilon2\int|\nabla\phi\cdot\nabla\eta|^2dx$，$\mathrm d^2N$ 的密度为 $-\epsilon\nabla\!\cdot\!\big((\nabla(\cdot)\cdot\nabla\eta^n)\nabla\eta^n\big)$：
+**两点必须说明（修正自早期错误版本）：**
 
-$$
-\mathcal T^n_N=M_4 N^n\Big(-\epsilon\,\nabla\!\cdot\!\big((\nabla\phi^n\cdot\nabla\eta^n)\nabla\eta^n\big)\Big)
-$$
+1. **右端不含 $(\tfrac1\tau+\sigma)\phi^n$。** 左端 boxed 式作用在增量 $\delta^n\phi$ 上，是**增量形式**；$\tfrac1\tau\delta^n\phi$、$\sigma\delta^n\phi$ 已在左端。Eyre 稳定化两端各加 $\sigma\delta^n\phi$ 本就相消，不留 $\sigma\phi^n$ 在右端。$(\tfrac1\tau+\sigma)\phi^n$ 是"解 $\phi^{n+1}$ 形式"才有的项，与增量形式不能并存。
 
-体积 $V$ 为线性泛函，$\mathrm d^2V=0$，无二阶显式项。
+2. **罚项不引入 Newton 二阶显式项 $\mathcal T^n$。** 罚项 Hessian $=M_j(\mathrm dC_j)\otimes(\mathrm dC_j)+M_j(C_j-c_j)\mathrm d^2C_j$。半正定秩一主项（第一项）进 LHS（即 $\mathcal A^n_{A,D,N}$）；第二项 $M_j(C_j-c_j)\mathrm d^2C_j$ 是 Hessian 乘**增量** $\delta\phi$ 的算子，**整项丢弃**——不进 LHS 也不进 RHS（Gauss–Newton 标准做法，亦即部署版 `quasi_newton.py` 的做法）。右端只放旧层精确负梯度。这样稳态 $\delta^n\phi=0\Leftrightarrow\mathcal R^n_\phi=0\Leftrightarrow\delta\mathcal E_M/\delta\phi=0$，不动点严格等于真临界点。
 
-> 注：$\mathcal T^n$ 是精确项，非近似——Newton 线性化只是把 Hessian 分块（半正定主项进 LHS、二阶项进右端），稳态 $\delta^n\phi\to0$ 时不动点不变。唯一的近似是变系数余项 $(\mathcal O-\mathcal S)[\phi^n]$ 的旧层滞后（$O(\tau)$，见 §5.2）。
+> 唯一的近似是变系数余项 $(\mathcal O-\mathcal S)[\phi^n]$ 的旧层滞后（$O(\tau)$，见 §5.2）；它叠加在上述 $\mathcal R^n_\phi$ 上。变系数余项滞后不改不动点（稳态 $\delta^n\phi=0$ 时 $\mathcal O[\phi^{n+1}]=\mathcal O[\phi^n]$，劈分精确）。
 
 解出 $\delta^n\phi$ 后：$\phi^{n+1}=\phi^n+\delta^n\phi$，并由 §3.1 显式更新 $q^{n+1},r^{n+1},s^{n+1}$。
 
@@ -246,38 +248,29 @@ $$
 
 $s^{n+1}_{(\phi)}$ 为 $\phi$-子步结束时的 $s$ 值。$\mathcal B^n_L$ 零阶项 $\delta\tfrac1\xi W\zeta^n$ 在 $\zeta^n<0$ 时为负，由 $\sigma$ 压住正性（§5.3）。
 
-右端：
+右端 $\mathcal R^n_\eta$ —— 同 §4.1，增量形式下为旧层精确负梯度：
+
+$$
+\boxed{\;\mathcal R^n_\eta=-\Big(\frac{\delta\mathcal E_M}{\delta\eta}\Big)(\phi^{n+1},\eta^n)\;}
+$$
+
+展开（即 §2.2 在旧层取负，弯曲项用已定值 $q^{n+1}$）：
 
 $$
 \begin{aligned}
-\mathcal R^n_\eta=\;&\big(\tfrac1\tau+\sigma\big)\eta^n
--\tfrac{k'(\eta^n)}{2k(\eta^n)}(q^{n+1})^2\\
-&-\mathcal T^n_{D\eta}-\mathcal T^n_{N\eta}-\mathcal T^n_{P\eta}\\
-&-(\mathcal O-\mathcal S)[\eta^n]\quad(\text{变系数余项，}\mathcal O=\mathcal B^n_L\text{ 的非骨架部分，见 §5.2})
+\mathcal R^n_\eta=\;&-\tfrac{k'(\eta^n)}{2k(\eta^n)}(q^{n+1})^2\\
+&+\delta\xi\,\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\eta^n\big)-\delta\tfrac1\xi W(\phi^{n+1})\,\eta^n((\eta^n)^2-1)\\
+&-M_3(D^n-a_d)\,\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^n/\xi)\\
+&+M_4 N^n\,\epsilon\,\nabla\!\cdot\!\big((\nabla\phi^{n+1}\cdot\nabla\eta^n)\nabla\phi^{n+1}\big)\\
+&-M_5 P^n\big(-2\xi\nabla\!\cdot\!(\Pi(\eta^n)\nabla\eta^n)-\tfrac2\xi\Pi(\eta^n)\,\eta^n((\eta^n)^2-1)\big)
 \end{aligned}
 $$
 
-二阶显式项（$\mathrm d^2C_j$ 作用在 $\eta^n$ 上，$W(\phi^{n+1})$ 为冻结权重）：
+线张力项的双井部分 $-\delta\tfrac1\xi W\,\eta(\eta^2-1)$ 在 LHS 经 Eyre 处理（$\mathcal B^n_L$ 零阶项），增量形式下其旧层值入右端、稳定化项相消，与 §4.1 同理。
 
-**面积差** $D=\int\tanh(\eta/\xi)W(\phi^{n+1})dx$，$\mathrm d^2D$ 密度 $-\tfrac2{\xi^2}\tanh(\eta/\xi)\,\mathrm{sech}^2(\eta/\xi)\,W(\phi^{n+1})$：
+**同 §4.1 的两点修正**：右端不含 $(\tfrac1\tau+\sigma)\eta^n$（增量形式）；罚项 $D,N,P$ 不引入 Newton 二阶显式项——半正定秩一主项已进 LHS（$\mathcal B^n_{D,N,P}$），含 $(C-c)\mathrm d^2C$ 的项整项丢弃，右端只放旧层精确负梯度。$P$ 项的精确梯度即 §2.2 第五行在旧层取值。
 
-$$
-\mathcal T^n_{D\eta}=M_3(D^n-a_d)\Big(-\tfrac2{\xi^2}\tanh(\eta^n/\xi)\,\mathrm{sech}^2(\eta^n/\xi)\,W(\phi^{n+1})\Big)
-$$
-
-**正交** $N=\tfrac\epsilon2\int|\nabla\phi^{n+1}\cdot\nabla\eta|^2dx$，$\mathrm d^2N$ 密度 $-\epsilon\nabla\!\cdot\!\big((\nabla(\cdot)\cdot\nabla\phi^{n+1})\nabla\phi^{n+1}\big)$：
-
-$$
-\mathcal T^n_{N\eta}=M_4 N^n\Big(-\epsilon\,\nabla\!\cdot\!\big((\nabla\phi^{n+1}\cdot\nabla\eta^n)\nabla\phi^{n+1}\big)\Big)
-$$
-
-**剖面正则** $P=\|p\|^2$。$\tfrac{M_5}2P^2$ 的 Hessian 半正定主项 $4M_5\,e^n_P\otimes e^n_P$ 已进 LHS（$\mathcal B^n_P$）；其余含 $P^n$ 的项（来自 $\mathrm d^2P$ 及 $\mathrm d(\|p\|^2)$ 的非主部）取旧层显式：
-
-$$
-\mathcal T^n_{P\eta}=M_5\big(\text{含 }P^n,p^n\text{ 的二阶显式项}\big)
-$$
-
-> $\mathcal T^n_{P\eta}$ 因 $P=\|p\|^2$ 经 $p$ 两层复合、展开冗长，实现时按"Hessian 减去已入 LHS 的秩一主项"取差即可，无需手写闭式。其余 $\mathcal T^n$ 同 §4.1 注：均为精确项，唯一近似仍是变系数余项的旧层滞后。
+> 唯一近似仍是变系数余项 $(\mathcal O-\mathcal S)[\eta^n]$ 的旧层滞后（$O(\tau)$）。不动点严格等于 $\delta\mathcal E_M/\delta\eta=0$。
 
 解出 $\delta^n\eta$ 后：$\eta^{n+1}=\eta^n+\delta^n\eta$，由 §3.1 更新 $p^{n+1},s^{n+1}$。
 
@@ -338,7 +331,7 @@ $$
 ### §5.4 求解流程（$\phi$-子步，$\eta$-子步同构）
 
 ```
-1. 实空间组装右端 R（含变系数余项、Newton 二阶显式项、Eyre 显式项）
+1. 实空间组装右端 R（旧层精确负梯度 + 变系数余项）
 2. FFT(R)
 3. 逐波数除 L̂(k)   ⇒ D⁻¹R     （η-子步除 M̂(k)）
 4. 对全部秩一项作 Woodbury 修正
