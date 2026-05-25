@@ -1,5 +1,5 @@
 """Full two-component energy E_M(phi, eta) and the variational derivatives
-delta E_M/delta phi (doc 4.1.7) and delta E_M/delta eta (doc 4.2.6).
+delta E_M/delta phi and delta E_M/delta eta (see doc/note/model_variance.md).
 
 Reuses the densities g, g', W from fields.py. eta enters via
     k(eta)   = k + c tanh(eta/xi)        bending stiffness
@@ -115,7 +115,7 @@ def energy_breakdown(phi, eta, grid, p):
     }
 
 
-# --- constraint-gradient directions (rank-1 Newton vectors, doc 5.2/5.5) ---
+# --- constraint-gradient directions (rank-1 Newton vectors; see doc/note/quasi_newton.md) ---
 # These are the bracket factors delta C_j / delta field (no penalty prefactor).
 def dV_dphi(phi, grid, p):
     return np.ones_like(phi)
@@ -156,7 +156,7 @@ def dP_deta(eta, grid, p):
     return -2.0 * p.xi * grid.div(Pi * ex, Pi * ey, Pi * ez) - (2.0 / p.xi) * Pi * eta * (eta**2 - 1.0)
 
 
-# --- variational derivative wrt phi (doc 4.1.7) ---
+# --- variational derivative wrt phi (model_variance.md) ---
 def dEM_dphi(phi, eta, grid, p):
     kk = k_eta(eta, p)
     m = curvature(phi, grid, p)
@@ -190,7 +190,7 @@ def dEM_dphi(phi, eta, grid, p):
     return out
 
 
-# --- variational derivative wrt eta (doc 4.2.6) ---
+# --- variational derivative wrt eta (model_variance.md) ---
 def dEM_deta(phi, eta, grid, p):
     m = curvature(phi, grid, p)
     W = W_density(phi, grid, p)

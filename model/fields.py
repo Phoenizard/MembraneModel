@@ -1,6 +1,6 @@
 """Pointwise field primitives shared across the energy/variation kernel.
 
-Symbols follow doc/note/IEQ_scheme_vesicle.md:
+Symbols follow doc/note/model_variance.md:
     g(phi)  = (1/eps) phi (1 - phi^2)
     g'(phi) = (1/eps) (1 - 3 phi^2)
     W(phi)  = (eps/2)|grad phi|^2 + (1/4eps)(phi^2-1)^2

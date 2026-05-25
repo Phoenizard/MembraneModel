@@ -1,7 +1,10 @@
-"""IEQ coupled steppers (two fields phi, eta; decoupled substeps).
+"""Quasi-Newton coupled steppers (two fields phi, eta; decoupled substeps).
 
-Each substep is a damped modified-Newton / preconditioned-descent step using
-the EXACT validated gradient:
+NOT classic IEQ: no auxiliary variables. Each substep is a damped
+modified-Newton / preconditioned-descent step on the gradient flow
+phi_t = -dE_M/dphi, using the EXACT validated gradient (full algorithm +
+discretisation: doc/note/quasi_newton.md; energy + variational derivatives:
+doc/note/model_variance.md):
 
     field^{n+1} = field^n - (P + H)^{-1} G
 
@@ -13,8 +16,7 @@ the EXACT validated gradient:
 
 The fixed point is G=0 (= true critical point of E_M) for ANY SPD P,H, so
 correctness rests on the validated gradient; P,H only set stability/speed.
-Solved with the Woodbury identity. Decoupling (doc D3): the eta-substep uses
-phi^{n+1}.
+Solved with the Woodbury identity. Decoupling: the eta-substep uses phi^{n+1}.
 """
 
 from __future__ import annotations
@@ -115,7 +117,7 @@ def steady_solve(phi, eta, grid, p, *, max_steps, log_every=0, monitor=None,
     warned = False
     for step in range(1, max_steps + 1):
         phi_new = phi_step(phi, eta, grid, p)
-        eta_new = eta_step(phi_new, eta, grid, p)  # D3: eta-substep uses phi^{n+1}
+        eta_new = eta_step(phi_new, eta, grid, p)  # decoupled: eta-substep uses phi^{n+1}
         d = grid.l2norm(phi_new - phi) + grid.l2norm(eta_new - eta)
         phi, eta = phi_new, eta_new
         if not np.isfinite(d):

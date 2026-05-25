@@ -1,16 +1,17 @@
-"""IEQ vesicle driver — full two-component run (exp1, Fig. 2 target).
+"""Quasi-Newton vesicle driver — full two-component run.
 
-Target (paper p.355): E_M ~ 124.49 (eps=0.1964) = E_bend ~48 + E_line ~76.
-Spec: doc/exp/exp1/README.md.
+Solves the gradient flow phi_t = -dE_M/dphi, eta_t = -dE_M/deta to steady state
+via a preconditioned modified-Newton step (see doc/note/quasi_newton.md). The
+energy + variational derivatives are in doc/note/model_variance.md.
 
-Runs the continuation solver to a relaxed/converged state and saves phi, eta
-(+ a same-named parameter sheet) to experiments/exp1/out/ (--name sets the
+Runs the continuation solver to a converged state and saves phi, eta (+ a
+same-named parameter sheet) to experiments/exp1/out/ (--name sets the
 basename). Visualise the saved fields with visualize.py.
 
 Usage:
-    python run_IEQ.py --quick                              # 32^3 smoke
-    python run_IEQ.py --N 32 --name exp1-1-N32 --log 25
-    python run_IEQ.py --N 64 --max_inner 8000 --wandb
+    python run_solver.py --quick                              # 32^3 smoke
+    python run_solver.py --N 32 --name exp1-1-N32 --log 25
+    python run_solver.py --N 64 --max_inner 8000 --wandb
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from params import Params
 import initial
 import results
 from model import energy
-from solver import ieq
+from solver import quasi_newton as qn
 from monitor import RunMonitor
 
 OUT = os.path.join(os.path.dirname(__file__), "experiments", "exp1", "out")
@@ -37,20 +38,20 @@ def run_case(N, eps, *, k, c, delta, tau, sigma, C0, M_start, M_max, rho,
     grid = SpectralGrid(N)
     phi = initial.sphere(grid, p)
     eta = initial.eta_two_phase(grid, p)
-    print(f"\n=== IEQ vesicle  N={N}^3  eps={eps}  k={k} c={c} delta={delta}  name={name} ===")
-    print(f"  init: {ieq.line(phi, eta, grid, p)}")
+    print(f"\n=== QN vesicle  N={N}^3  eps={eps}  k={k} c={c} delta={delta}  name={name} ===")
+    print(f"  init: {qn.line(phi, eta, grid, p)}")
 
     settings = {"N": N, "M_start": M_start, "M_max": M_max, "rho": rho,
                 "e_rtol": e_rtol, "patience": patience, "outer_tol": outer_tol,
                 "max_inner": max_inner, "log_every": log_every}
     with RunMonitor(name, p, settings, out_dir=OUT, use_wandb=use_wandb,
                     wandb_mode=wandb_mode) as mon:
-        phi, eta, history = ieq.continuation(
+        phi, eta, history = qn.continuation(
             phi, eta, grid, p, M_start=M_start, M_max=M_max, rho=rho,
             e_rtol=e_rtol, patience=patience, outer_tol=outer_tol,
             max_inner=max_inner, log_every=log_every, monitor=mon,
         )
-    print(f"  final: {ieq.line(phi, eta, grid, p)}")
+    print(f"  final: {qn.line(phi, eta, grid, p)}")
 
     # output interface (compute + save bundled): fields + same-named param sheet
     bd = energy.energy_breakdown(phi, eta, grid, p)

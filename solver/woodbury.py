@@ -1,6 +1,6 @@
 """Woodbury solve for  (D + sum_j alpha_j u_j u_j^T) x = b,
 where D is the diagonal FFT operator (symbol L_hat) and the u_j are the
-rank-1 vectors from the penalty terms (doc 5.6.2(e)).
+rank-1 vectors from the penalty terms (see doc/note/quasi_newton.md).
 
     x = D^-1 b - D^-1 U (alpha^-1 + U^T D^-1 U)^-1 U^T D^-1 b
 
