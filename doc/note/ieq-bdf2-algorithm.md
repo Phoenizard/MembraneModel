@@ -102,8 +102,6 @@ $$
 
 IEQ 的核心是对每个非线性势引入辅助变量，使能量成为辅助变量的二次型。本模型引入四个辅助变量：
 
-> 这里我们引入了四个辅助变量，可能在数值上增加误差，但是从能量证明上依然满足耗散。
-
 $$
 \begin{array}{lll}
 \text{弯曲} & q:=a(\eta)\big(\epsilon\Delta\phi+g(\phi)\big) & E=\tfrac12\|q\|^2\\[4pt]
@@ -122,35 +120,38 @@ A=\tfrac12\int_\Omega(r^2-C_0)\,dx,\qquad
 D=\tfrac12\int_\Omega\tanh(\eta/\xi)(r^2-C_0)\,dx
 $$
 
-### §3.1 辅助变量演化恒等式
+### §3.1 辅助变量的演化与变分重构
 
-由辅助变量定义对时间求导（链式法则），即得其演化恒等式。每式右端对场增量线性，系数因子取冻结值（在 BDF2 格式中取二阶外推 $\cdot^\star$，见 §4）。演化恒等式的结构如下：
+辅助变量有两类关系：一类是对时间求导得到的**演化恒等式**，一类是变分导数经辅助变量改写得到的**线性重构算子**。下文以弯曲项辅助变量 $q$ 为主线，其余辅助变量同构。
 
-$$
-q^{n+1}=q^n+\mathcal C^n_q[\delta^n\phi],\qquad
-\mathcal C^n_q[\psi]:=a(\eta^n)\big(\epsilon\Delta\psi+g'(\phi^n)\psi\big)
-$$
+**时间演化。** 由辅助变量定义对时间求导（链式法则）即得。记 $\mathcal D(\cdot):=\dfrac{d(\cdot)}{dt}$，各辅助变量的时间导数为：
 
 $$
-r^{n+1}=r^n+\mathcal C^n_r[\delta^n\phi],\qquad
-\mathcal C^n_r[\psi]:=\tfrac1{r^n}\big(\epsilon\nabla\phi^n\cdot\nabla\psi+\tfrac1\epsilon\phi^n((\phi^n)^2-1)\psi\big)
+\mathcal D q=a(\eta)\big(\epsilon\Delta\phi_t+g'(\phi)\,\phi_t\big)
 $$
 
 $$
-s^{n+1}=s^n+\mathcal C^n_s[\delta^n\phi],\qquad
-\mathcal C^n_s[\psi]:=\sqrt\epsilon\,\nabla\psi\cdot\nabla\eta^n
+\mathcal D r=\tfrac1r\big(\epsilon\,\nabla\phi\cdot\nabla\phi_t+\tfrac1\epsilon\phi(\phi^2-1)\,\phi_t\big)
 $$
 
 $$
-p^{n+1}=p^n+\mathcal D^n_p[\delta^n\eta],\qquad
-\mathcal D^n_p[\psi]:=\xi\nabla\eta^n\cdot\nabla\psi-\tfrac1\xi\eta^n\zeta^n\psi,\quad\zeta^n:=(\eta^n)^2-1
+\mathcal D s=\sqrt\epsilon\,\big(\nabla\phi_t\cdot\nabla\eta+\nabla\phi\cdot\nabla\eta_t\big)
 $$
 
 $$
-\mathcal D^n_s[\psi]:=\sqrt\epsilon\,\nabla\phi^{n+1}\cdot\nabla\psi
+\mathcal D p=\xi\,\nabla\eta\cdot\nabla\eta_t-\tfrac1\xi\eta(\eta^2-1)\,\eta_t
 $$
 
-说明：$\mathcal C^n_s$ 用于 $\phi$-子步的 $s$ 演化（$\eta$ 冻结），$\mathcal D^n_s$ 用于 $\eta$-子步的 $s$ 演化（$\phi$ 冻结）；二者结构同为 $\sqrt\epsilon\,\nabla(\cdot)\cdot\nabla(\text{冻结场})$，仅冻结的场不同。所有算子 $\mathcal C,\mathcal D$ 对 $\psi$ 线性 —— 这是 IEQ 能将时间格式线性化的根本。
+每式右端对场的时间导数 $\phi_t,\eta_t$ 线性 —— 这是 IEQ 能将时间格式线性化的根本。其中 $s$ 同时依赖 $\phi$ 与 $\eta$，故其全导数含两项；解耦子步与 BDF2 离散在 §4.3 一步到位。
+
+**变分重构。** §2 的变分导数对场是非线性的；引入辅助变量后，可将其改写成"对辅助变量线性的算子作用在该辅助变量上"。以弯曲能为例，由 §2.1，$\delta E/\delta\phi=\epsilon\Delta\big(a(\eta)^2(\epsilon\Delta\phi+g(\phi))\big)+a(\eta)^2g'(\phi)(\epsilon\Delta\phi+g(\phi))$；代入 $q=a(\eta)(\epsilon\Delta\phi+g(\phi))$（即 $a(\eta)(\epsilon\Delta\phi+g(\phi))=q$），改写为
+
+$$
+\frac{\delta E}{\delta\phi}=\mathcal G_q[q],\qquad
+\mathcal G_q[h]:=\epsilon\Delta\big(a(\eta)\,h\big)+g'(\phi)\,a(\eta)\,h
+$$
+
+其中 $\mathcal G_q$ 对辅助变量 $q$ **线性**，系数 $a(\eta),g'(\phi)$ 为已知冻结场。非线性并未消失，而是被分流进了"$q$ 如何依赖 $\phi$"（即上面的演化 $\mathcal D q$）；$\mathcal G_q$ 只承担线性外壳。$r,s$ 的变分重构同理，在 §4 各项推导时按需给出。
 
 ---
 
@@ -158,148 +159,140 @@ $$
 
 ### §4.0 BDF2 离散
 
-梯度流 $\phi_t=-\delta\mathcal E_M/\delta\phi$，时间导数用三层 BDF2 公式：
+IEQ 方案确定取隐式构造：变分导数取在未知层 $n+1$。梯度流 $\phi_t=-\delta\mathcal E_M/\delta\phi$，时间导数用三层 BDF2 公式：
 
 $$
-\phi_t\Big|^{n+1}\approx\frac{3\phi^{n+1}-4\phi^n+\phi^{n-1}}{2\tau}
+\phi_t\Big|^{n+1}\approx\frac{3\phi^{n+1}-4\phi^n+\phi^{n-1}}{2\tau}=-\frac{\delta\mathcal E_M}{\delta\phi}\Big|^{n+1}
 $$
 
-代入梯度流并增量化（$\phi^{n+1}=\phi^n+\delta^n\phi$，$3\phi^{n+1}-4\phi^n+\phi^{n-1}=3\delta^n\phi-\delta^{n-1}\phi$）：
+增量化（$\delta^n\phi=\phi^{n+1}-\phi^n$，$\delta^{n-1}\phi=\phi^n-\phi^{n-1}$）：
+
+$$
+3\phi^{n+1}-4\phi^n+\phi^{n-1}=3(\phi^{n+1}-\phi^n)-(\phi^n-\phi^{n-1})=3\,\delta^n\phi-\delta^{n-1}\phi
+$$
+
+代入上式移项即得：
 
 $$
 \frac{3}{2\tau}\,\delta^n\phi=-\frac{\delta\mathcal E_M}{\delta\phi}\Big|^{n+1}+\frac{1}{2\tau}\,\delta^{n-1}\phi
 $$
 
-右端变分导数取在 $n+1$ 层。下面 §4.1 将其逐项回代 §3.1 的辅助变量演化恒等式：含未知 $\delta^n\phi$ 的部分归并入左端、形成隐式算子，其余已知量留右端。解耦两子步：先解 $\phi$（固定 $\eta=\eta^\star$），后解 $\eta$（固定 $\phi=\phi^{n+1}$），$\eta^\star=\mathrm{Ext}[\eta^n,\eta^{n-1}]$。
+在 $\phi$-子步里，$\dfrac{\delta\mathcal E_M}{\delta\phi}\big|^{n+1}$ 这个表达式里同时含 $\phi^{n+1}$ 和 $\eta^{n+1}$：
 
+- $\phi^{n+1}$ 是这一子步正在求的未知量，作为变量保留（再通过 IEQ 辅助变量线性化处理）；
+- $\eta^{n+1}$ 在这一子步还没解出，没有值，于是用外推 $\eta^\star=2\eta^n-\eta^{n-1}$ 顶替它，不破坏 BDF2 精度）。
 ### §4.1 $\phi$-子步
 
-固定 $\eta=\eta^\star$。本节先以弯曲项为例完整推出其线性方程，其余项同构。
+固定 $\eta$。本节先以弯曲项为例完整推出其线性方程，其余项同构。
 
-记号（均为已知量，除 $\phi^{n+1}$、$\delta^n\phi$ 外）：
+提示：$\phi$-子步中凡含 $\eta$ 的系数取外推 $\eta^\star=2\eta^n-\eta^{n-1}$、含 $\phi$ 的系数取 $\phi^\star=2\phi^n-\phi^{n-1}$（$=\,$对应 $n+1$ 层值 $+O(\tau^2)$），故 §3.1 的 $\mathcal D_q,\mathcal G_q$ 成为已知系数（$a(\eta^\star),g'(\phi^\star)$）的线性算子；唯一保留为新层未知的是辅助变量 $q^{n+1}$ 与场增量 $\delta^n\phi$。
+#### 弯曲项
 
-$$
-\eta^\star=2\eta^n-\eta^{n-1},\quad
-\phi^\star=2\phi^n-\phi^{n-1},\quad
-q^\star=2q^n-q^{n-1}
-$$
-
-两个线性微分算子（系数 $a,g'$ 取外推值，故为已知系数算子）：
+从 §4.0 的 BDF2 增量式出发，仅保留弯曲能贡献 $E=\tfrac12\|q\|^2$：
 
 $$
-\mathcal C^\star_q[\psi]:=a(\eta^\star)\big(\epsilon\Delta\psi+g'(\phi^\star)\,\psi\big)
+\frac{3}{2\tau}\,\delta^n\phi=-\frac{\delta E}{\delta\phi}\Big|^{n+1}+\frac1{2\tau}\,\delta^{n-1}\phi
 $$
 
-$$
-\mathcal G^\star_q[h]:=\epsilon\Delta\big(a(\eta^\star)\,h\big)+g'(\phi^\star)\,a(\eta^\star)\,h
-$$
-
-$\mathcal G^\star_q$ 即 §2.1 弯曲项变分导数 $\delta E/\delta\phi$ 中作用在辅助变量 $q$ 上的算子（直接读出，系数取外推值）。
-
-**弯曲项。** 弯曲能 $E=\tfrac12\|q\|^2$，$\delta E/\delta\phi=\mathcal G_q[q]$。BDF2 离散梯度流的弯曲部分（取自 §4.0 末式）：
+**变分重构**（§3.1）：$\delta E/\delta\phi=\mathcal G_q[q]$，取在 $n+1$ 层（系数已外推冻结）即 $\delta E/\delta\phi|^{n+1}=\mathcal G_q[q^{n+1}]$，代入：
 
 $$
-\frac{3}{2\tau}\,\delta^n\phi=-\mathcal G^\star_q[q^{n+1}]+\frac1{2\tau}\,\delta^{n-1}\phi
+\frac{3}{2\tau}\,\delta^n\phi=-\mathcal G_q[q^{n+1}]+\frac1{2\tau}\,\delta^{n-1}\phi
 \tag{1}
 $$
 
-$q^{n+1}$ 未知。$q$ 与 $\phi$ 同样按 BDF2 推进（§4.3 详述），其与场增量的关系为
+**$q^{n+1}$ 的 BDF2 递推**（§3.1 演化 $\mathcal D q$ 配 §4.0 同款 BDF2，§4.3 详述）：
 
 $$
-q^{n+1}=\tfrac13\big(4q^n-q^{n-1}\big)+\mathcal C^\star_q[\delta^n\phi]-\tfrac13\mathcal C^\star_q[\delta^{n-1}\phi]
+q^{n+1}=\tfrac13\big(4q^n-q^{n-1}\big)+\mathcal D_q[\delta^n\phi]-\tfrac13\mathcal D_q[\delta^{n-1}\phi]
 \tag{2}
 $$
 
-右端仅 $\mathcal C^\star_q[\delta^n\phi]$ 含未知 $\delta^n\phi$，其余 $\tfrac13(4q^n-q^{n-1})$ 与 $\tfrac13\mathcal C^\star_q[\delta^{n-1}\phi]$ 全为旧层已知量。
+右端仅 $\mathcal D_q[\delta^n\phi]$ 含未知 $\delta^n\phi$，其余 $\tfrac13(4q^n-q^{n-1})$ 与 $\tfrac13\mathcal D_q[\delta^{n-1}\phi]$ 全为旧层已知量。
 
-(2) 代入 (1)，用 $\mathcal G^\star_q$ 线性展开：
+**(2) 代入 (1)**，$\mathcal G_q$ 线性逐项作用：
 
 $$
 \frac{3}{2\tau}\,\delta^n\phi
-=-\mathcal G^\star_q\mathcal C^\star_q[\delta^n\phi]
--\mathcal G^\star_q\big[\tfrac13(4q^n-q^{n-1})\big]
-+\tfrac13\mathcal G^\star_q\mathcal C^\star_q[\delta^{n-1}\phi]
+=-\mathcal G_q\mathcal D_q[\delta^n\phi]
+-\mathcal G_q\big[\tfrac13(4q^n-q^{n-1})\big]
++\tfrac13\mathcal G_q\mathcal D_q[\delta^{n-1}\phi]
 +\frac1{2\tau}\,\delta^{n-1}\phi
 $$
 
-含 $\delta^n\phi$ 的项移左、已知项留右：
+含 $\delta^n\phi$ 的项移左、已知项留右，得弯曲项的线性方程：
 
 $$
-\Big(\tfrac{3}{2\tau}\mathcal I+\mathcal G^\star_q\mathcal C^\star_q\Big)\,\delta^n\phi
-=-\mathcal G^\star_q\big[\tfrac13(4q^n-q^{n-1})\big]
-+\tfrac13\mathcal G^\star_q\mathcal C^\star_q[\delta^{n-1}\phi]
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+\mathcal G_q\mathcal D_q\Big)\,\delta^n\phi
+=-\mathcal G_q\big[\tfrac13(4q^n-q^{n-1})\big]
++\tfrac13\mathcal G_q\mathcal D_q[\delta^{n-1}\phi]
 +\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
 $$
 
-即弯曲项的线性方程，左端隐式算子 $\mathcal A^\star_E:=\mathcal G^\star_q\mathcal C^\star_q$。
+左端隐式算子记 $\mathcal A_E:=\mathcal G_q\mathcal D_q$。
 
-**线张力项。** 线张力能 $L$ 经辅助变量 $r$ 表达（$W(\phi)=\tfrac12(r^2-C_0)$），$\delta L/\delta\phi=\mathcal G_r[\Phi_\eta\,r]$，其中 $\Phi^\star_\eta$ 为冻结权重（已知）。算子定义：
+#### 线张力项
 
-$$
-\mathcal C^\star_r[\psi]:=\tfrac1{r^\star}\big(\epsilon\nabla\phi^\star\cdot\nabla\psi+\tfrac1\epsilon\phi^\star((\phi^\star)^2-1)\psi\big)
-$$
+线张力能 $L$ 的 $\phi$-相关密度为 $\Phi_\eta W(\phi)$，其中 $W(\phi)=\tfrac12(r^2-C_0)$ 经辅助变量 $r$ 表达，$\Phi_\eta$ 为线张力能中与 $\eta$ 相关的密度因子（不含 $\phi$，在 $\phi$-子步为冻结权重）：
 
 $$
-\mathcal G^\star_r[h]:=-\epsilon\,\nabla\!\cdot\!\big(\tfrac h{r^\star}\nabla\phi^\star\big)+\tfrac1{\epsilon r^\star}\phi^\star((\phi^\star)^2-1)\,h
+\Phi_\eta:=\delta\Big(\tfrac\xi2|\nabla\eta|^2+\tfrac1{4\xi}(\eta^2-1)^2\Big)
 $$
 
-BDF2 离散梯度流的线张力部分：
+$\phi$-子步取外推 $\eta^\star$，记 $\Phi^\star_\eta=\delta\big(\tfrac\xi2|\nabla\eta^\star|^2+\tfrac1{4\xi}((\eta^\star)^2-1)^2\big)$。
+
+**变分重构**（§3.1）：$\delta L/\delta\phi=\mathcal G_r[\Phi_\eta\,r]$，其中
 
 $$
-\frac{3}{2\tau}\,\delta^n\phi=-\mathcal G^\star_r\big[\Phi^\star_\eta\,r^{n+1}\big]+\frac1{2\tau}\,\delta^{n-1}\phi
+\mathcal D_r[\psi]:=\tfrac1r\big(\epsilon\nabla\phi\cdot\nabla\psi+\tfrac1\epsilon\phi(\phi^2-1)\psi\big),\qquad
+\mathcal G_r[h]:=-\epsilon\,\nabla\!\cdot\!\big(\tfrac h r\nabla\phi\big)+\tfrac1{\epsilon r}\phi(\phi^2-1)\,h
+$$
+
+（系数 $r,\phi$ 取外推 $r^\star,\phi^\star$。$\mathcal G_r$ 中的 $1/r$ 与代入的 $h=\Phi_\eta r$ 之 $r$ 精确抵消，故变分重构本身不奇异；$1/r$ 的潜在奇异只在演化算子 $\mathcal D_r$ 中——此处 $C_0>0$ 保证 $r\ge\sqrt{C_0}$，避免界面外平坦区 $W\to0$ 致 $1/r$ 发散。）
+
+BDF2 增量式（线张力部分），变分重构取 $n+1$ 层（$\Phi_\eta$ 冻结为 $\Phi^\star_\eta$）：
+
+$$
+\frac{3}{2\tau}\,\delta^n\phi=-\mathcal G_r[\Phi^\star_\eta\,r^{n+1}]+\frac1{2\tau}\,\delta^{n-1}\phi
 \tag{1'}
 $$
 
-$r^{n+1}$ 未知，与 $\phi$ 同按 BDF2 推进（§4.3）：
+$r^{n+1}$ 的 BDF2 递推（§3.1 演化 $\mathcal D r$ 配 BDF2，§4.3 详述）：
 
 $$
-r^{n+1}=\tfrac13\big(4r^n-r^{n-1}\big)+\mathcal C^\star_r[\delta^n\phi]-\tfrac13\mathcal C^\star_r[\delta^{n-1}\phi]
+r^{n+1}=\tfrac13\big(4r^n-r^{n-1}\big)+\mathcal D_r[\delta^n\phi]-\tfrac13\mathcal D_r[\delta^{n-1}\phi]
 \tag{2'}
 $$
 
-(2') 代入 (1')，用 $\mathcal G^\star_r$ 线性展开，含 $\delta^n\phi$ 的项移左、已知项留右：
+(2') 代入 (1')，$\mathcal G_r[\Phi^\star_\eta\,\cdot\,]$ 线性逐项作用，含 $\delta^n\phi$ 移左、已知留右，得线张力项的线性方程：
 
 $$
-\Big(\tfrac{3}{2\tau}\mathcal I+\mathcal G^\star_r\big(\Phi^\star_\eta\,\mathcal C^\star_r\big)\Big)\,\delta^n\phi
-=-\mathcal G^\star_r\big[\Phi^\star_\eta\cdot\tfrac13(4r^n-r^{n-1})\big]
-+\tfrac13\mathcal G^\star_r\big(\Phi^\star_\eta\,\mathcal C^\star_r\big)[\delta^{n-1}\phi]
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+\mathcal G_r\big[\Phi^\star_\eta\,\mathcal D_r\big]\Big)\,\delta^n\phi
+=-\mathcal G_r\big[\Phi^\star_\eta\cdot\tfrac13(4r^n-r^{n-1})\big]
++\tfrac13\mathcal G_r\big[\Phi^\star_\eta\,\mathcal D_r[\delta^{n-1}\phi]\big]
 +\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
 $$
 
-左端隐式算子 $\mathcal A^\star_L:=\mathcal G^\star_r(\Phi^\star_\eta\,\mathcal C^\star_r)$。
+左端隐式算子记 $\mathcal A_L:=\mathcal G_r[\Phi^\star_\eta\,\mathcal D_r]$。
 
-**其余项。** 约束 $A,D$ 经 $r$、正交 $N$ 经 $s$，其辅助变量同按 §4.3 的 BDF2 推进，回代方式与弯曲、线张力相同，各自的隐式算子见下方算子表。Eyre 稳定化：在方程中加入 $\sigma(\delta^n\phi-\delta^{n-1}\phi)$（$\sigma>0$），其中 $\sigma\delta^n\phi$ 含未知量、归入左端，$-\sigma\delta^{n-1}\phi$ 已知、归入右端。稳定项作用在二阶差分 $\delta^n\phi-\delta^{n-1}\phi=\phi^{n+1}-2\phi^n+\phi^{n-1}=O(\tau^2)$ 上，与 BDF2 主格式同阶，不降低时间精度；稳态时该项为零，不改不动点。罚项的隐式离散需专门处理，见下。
+#### 惩罚项
 
-**罚项的 Newton 线性化。** 罚项 $\tfrac{M_j}2(C_j-c_j)^2$（$C_j$ 为约束泛函 $V,A,D,N$，$c_j$ 为目标值）。其变分导数（一次求导，链式法则）：
+##### Newton 线性化
 
+罚项 $\tfrac{M_j}2(C_j-c_j)^2$（$C_j$ 为约束泛函 $V,A,D,N$，$c_j$ 为目标值）。其变分导数（一次求导，链式法则）：
 $$
 \frac{\delta}{\delta\phi}\Big[\tfrac{M_j}2(C_j-c_j)^2\Big]=M_j(C_j-c_j)\,\frac{\delta C_j}{\delta\phi}
 $$
 
-BDF2 离散梯度流为 $\tfrac{3\phi^{n+1}-4\phi^n+\phi^{n-1}}{2\tau}=-\delta\mathcal E_M/\delta\phi|^{n+1}$，右端梯度取在未知层 $n+1$。把上标 $|^{n+1}$ 落到罚项梯度上——式中 $\phi$ 全代 $\phi^{n+1}$：
+其中对于变量$\phi$, 在C和其变分中都出现。无法保证对这些项的变分是Linear的，因此为了IEQ构建线性方程，需要对每一项的变分做线性近似。
 
-$$
-M_j(C_j-c_j)\,\frac{\delta C_j}{\delta\phi}\bigg|^{n+1}
-=M_j\big(C_j^{n+1}-c_j\big)\,\Big(\frac{\delta C_j}{\delta\phi}\Big)^{n+1}
-$$
+##### 面积 $A$
 
-其中 $C_j^{n+1}=C_j(\phi^{n+1})$ 与 $(\delta C_j/\delta\phi)^{n+1}$ 均含未知场 $\phi^{n+1}$，不能直接计算。
-
-**与弯曲项的对照。** 弯曲项也面对同一处境：式 (1) 右端 $\mathcal G^\star_q[q^{n+1}]$ 含未知 $q^{n+1}$。但弯曲能的非线性已被辅助变量 $q$ 二次化吸收，$q$ 有一条**精确且线性**的 BDF2 推进式 (2)，代入即把未知量精确转为对场增量的线性依赖，无需任何近似。罚项的 $C_j^{n+1}$ 没有这样的辅助变量——罚项外层平方 $(C_j-c_j)^2$ 未被 IEQ 二次化，$C_j$ 对 $\phi$ 非线性，不存在现成的线性递推。故只能退而用 **Newton 线性化**：对 $n+1$ 层梯度作泰勒展开取一阶，将其对 $\phi^{n+1}$ 的非线性依赖近似成对增量的线性依赖。
-
-具体地，对梯度 $M_j(C_j-c_j)\,\delta C_j/\delta\phi$ 作 Newton 线性化。它是两个含 $\phi$ 的因子 $M_j(C_j-c_j)$ 与 $\delta C_j/\delta\phi$ 之积，对其求方向导数（按乘积法则）得 Hessian 两项：
-
-$$
-\text{Hessian}[\,\cdot\,]
-=\underbrace{M_j\big(\tfrac{\delta C_j}{\delta\phi},\,\cdot\,\big)\,\tfrac{\delta C_j}{\delta\phi}}_{\text{主项：秩一,半正定}}
-+\underbrace{M_j(C_j-c_j)\,\mathrm d^2C_j[\,\cdot\,]}_{\text{二阶项}}
-$$
-
-**主项**为 $(\delta C_j/\delta\phi)\otimes(\delta C_j/\delta\phi)$ 型秩一算子，半正定。与 Eyre 稳定项同理，为保持 BDF2 二阶精度，主项作用在二阶差分 $\delta^n\phi-\delta^{n-1}\phi$ 上：$M_j(\delta C_j/\delta\phi,\delta^n\phi-\delta^{n-1}\phi)(\delta C_j/\delta\phi)$，其中含 $\delta^n\phi$ 的部分（隐式算子 $\mathcal A^\star_{A,D,N,V}$）移入左端，含 $\delta^{n-1}\phi$ 的部分已知、移入右端。**二阶项**含约束残差 $(C_j-c_j)$ 与二阶变分 $\mathrm d^2C_j$：$(C_j-c_j)$ 在收敛前可正可负，$\mathrm d^2C_j$ 有定号，两者相乘符号不定；若入左端会破坏 LHS 正定性。又因该项在稳态 $\delta^n\phi-\delta^{n-1}\phi=0$ 时为零，对不动点无贡献。故**整项丢弃**——不进 LHS（保正定），不进 RHS（不污染不动点）。此即 Gauss–Newton 做法：仅取 Hessian 的半正定主项。右端另放精确负梯度 $-M_j(C_j-c_j)\,\delta C_j/\delta\phi$。
-
-*体积 $V$。* $V(\phi)=\int_\Omega\phi\,dx$ 为线性泛函，$\delta V/\delta\phi=\mathbf 1$（常值场），$\mathrm d^2V=0$。二阶项天然为零，无需丢弃；主项即 $\mathcal A^\star_V=M_1\,\mathbf 1\otimes\mathbf 1$。
-
-*面积 $A$（逐步）。* $A=\int_\Omega W(\phi)\,dx$，$W(\phi)=\tfrac\epsilon2|\nabla\phi|^2+\tfrac1{4\epsilon}(\phi^2-1)^2$，$\phi$ 非线性出现，故 $\mathrm d^2A\ne0$。
+$A=\int_\Omega W(\phi)\,dx$，$W(\phi)=\tfrac\epsilon2|\nabla\phi|^2+\tfrac1{4\epsilon}(\phi^2-1)^2$，$\phi$ 非线性出现，故 $\mathrm d^2A\ne0$。
 
 一阶变分（$W$ 对 $\phi$ 求变分，梯度项分部积分）：
 
@@ -307,28 +300,135 @@ $$
 \frac{\delta A}{\delta\phi}=-\epsilon\Delta\phi+\tfrac1\epsilon\phi(\phi^2-1)
 $$
 
-二阶变分（对上式再求方向导数；$-\epsilon\Delta$ 线性、导数为自身，$\tfrac1\epsilon\phi(\phi^2-1)=\tfrac1\epsilon(\phi^3-\phi)$ 求导得 $\tfrac1\epsilon(3\phi^2-1)$）：
+二阶变分（对上式再求方向导数；$-\epsilon\Delta$ 线性、导数为自身，$\tfrac1\epsilon(\phi^3-\phi)$ 求导得 $\tfrac1\epsilon(3\phi^2-1)$）：
 
 $$
 \mathrm d^2A[\psi]=-\epsilon\Delta\psi+\tfrac1\epsilon(3\phi^2-1)\,\psi
 $$
 
-代入 Hessian 通式（$j=2$，系数取外推层 $\phi^\star$），主项作用在二阶差分上：
+线性化即对精确梯度 $G(\phi):=M_2(A-a_0)\dfrac{\delta A}{\delta\phi}$ 在已知态 $\phi^\star$ 处作一阶泰勒展开，增量 $\Delta\phi:=\phi^{n+1}-\phi^\star$：
 
 $$
-\text{主项}_A=M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star\,[\delta^n\phi-\delta^{n-1}\phi],
-\qquad
-\text{二阶项}_A=M_2(A^\star-a_0)\,\mathrm d^2A^\star[\,\cdot\,]
+G(\phi^{n+1})\approx G(\phi^\star)+G'(\phi^\star)[\Delta\phi]
 $$
 
-主项中含 $\delta^n\phi$ 的部分给出 $\mathcal A^\star_A=M_2\,e^\star_A\otimes e^\star_A$（$e^\star_A=(\delta A/\delta\phi)^\star$，经 $r$ 即 $\mathcal G^\star_r[r^\star]$），含 $\delta^{n-1}\phi$ 的部分入右端；二阶项 $M_2(A^\star-a_0)\big(-\epsilon\Delta+\tfrac1\epsilon(3(\phi^\star)^2-1)\big)$ 含变号标量 $(A^\star-a_0)$、整项丢弃。$D,N$ 同理。
+$G(\phi)$ 是两个含 $\phi$ 的因子之积：标量 $M_2(A-a_0)$ 与场 $\dfrac{\delta A}{\delta\phi}$。对它求导用乘积法则：
 
-**回代结果。** 各项相加，$\delta^n\phi$ 满足线性方程
+$$
+G'[\psi]=M_2\underbrace{\Big(\tfrac{\delta A}{\delta\phi},\psi\Big)}_{\text{标量 }(A-a_0)\text{ 的方向导数}}\tfrac{\delta A}{\delta\phi}
++M_2(A-a_0)\underbrace{\mathrm d^2A[\psi]}_{\tfrac{\delta A}{\delta\phi}\text{ 的方向导数}}
+$$
+
+第一项来自标量因子求导：$\dfrac{d}{ds}A(\phi+s\psi)=\big(\tfrac{\delta A}{\delta\phi},\psi\big)$（$L^2$ 内积），乘上原场因子 $\dfrac{\delta A}{\delta\phi}$，给出 $\big(\tfrac{\delta A}{\delta\phi}\otimes\tfrac{\delta A}{\delta\phi}\big)[\psi]$ 型秩一主项；第二项来自场因子求导 $\mathrm d^2A[\psi]$，乘上标量 $(A-a_0)$，即二阶项。
+
+精确梯度 $G(\phi)=M_2(A-a_0)\dfrac{\delta A}{\delta\phi}$ 的一阶泰勒展开（中心取外推 $\phi^\star$，保二阶）：
+
+$$
+G(\phi^{n+1})\approx\underbrace{M_2(A^\star-a_0)\big(\tfrac{\delta A}{\delta\phi}\big)^\star}_{\text{零阶项（精确负梯度）}}
++\underbrace{M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star[\phi^{n+1}-\phi^\star]}_{\text{主项, 秩一半正定}}
++\underbrace{M_2(A^\star-a_0)\,\mathrm d^2A^\star[\phi^{n+1}-\phi^\star]}_{\text{二阶项}}
+$$
+
+二阶项含变号标量 $(A^\star-a_0)$ 与定号 $\mathrm d^2A^\star$，符号不定、稳态为零，按 Gauss–Newton **整项丢弃**。
+
+代入 BDF2 增量式（仅面积罚贡献），并用 $\phi^{n+1}-\phi^\star=\delta^n\phi-\delta^{n-1}\phi$：
+
+$$
+\frac{3}{2\tau}\,\delta^n\phi
+=-M_2(A^\star-a_0)\big(\tfrac{\delta A}{\delta\phi}\big)^\star
+-M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star[\delta^n\phi-\delta^{n-1}\phi]
++\frac1{2\tau}\,\delta^{n-1}\phi
+$$
+
+主项线性，拆开二阶差分、含 $\delta^n\phi$ 移左，得面积罚的线性方程：
+
+$$
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star\Big)\,\delta^n\phi
+=-M_2(A^\star-a_0)\big(\tfrac{\delta A}{\delta\phi}\big)^\star
++M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
++\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
+$$
+
+左端隐式算子记 $\mathcal A_A:=M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\otimes\big(\tfrac{\delta A}{\delta\phi}\big)^\star$（秩一、半正定），其中
+
+$$
+\Big(\tfrac{\delta A}{\delta\phi}\Big)^\star=-\epsilon\Delta\phi^\star+\tfrac1\epsilon\phi^\star((\phi^\star)^2-1),\qquad
+A^\star=\tfrac12\int_\Omega((r^\star)^2-C_0)\,dx
+$$
+
+##### 面积差 $D$
+
+$$
+D=\tfrac12\int_\Omega\tanh(\eta/\xi)(r^2-C_0)\,dx
+$$
+
+$$
+\big(\tfrac{\delta D}{\delta\phi}\big)^\star=-\epsilon\nabla\!\cdot\!(\tanh(\eta^\star/\xi)\nabla\phi^\star)+\tfrac1\epsilon\phi^\star((\phi^\star)^2-1)\tanh(\eta^\star/\xi)
+$$
+
+$$
+D^\star=\tfrac12\int_\Omega\tanh(\eta^\star/\xi)((r^\star)^2-C_0)\,dx
+$$
+
+Gauss–Newton 后线性方程：
+$$
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+M_3\big(\tfrac{\delta D}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta D}{\delta\phi}\big)^\star\Big)\,\delta^n\phi
+=-M_3(D^\star-a_d)\big(\tfrac{\delta D}{\delta\phi}\big)^\star
++M_3\big(\tfrac{\delta D}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta D}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
++\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
+$$
+
+左端隐式算子记 $\mathcal A_D:=M_3\big(\tfrac{\delta D}{\delta\phi}\big)^\star\otimes\big(\tfrac{\delta D}{\delta\phi}\big)^\star$（秩一、半正定）。
+
+##### 正交 $N$
+$N=\tfrac12\|s\|^2$，$s=\sqrt\epsilon(\nabla\phi\cdot\nabla\eta)$。 $\big(\tfrac{\delta N}{\delta\phi}\big)^\star=-\epsilon\nabla\!\cdot\!((\nabla\phi^\star\cdot\nabla\eta^\star)\nabla\eta^\star)$， $N^\star=\tfrac12\|s^\star\|^2$（目标值 $0$）
+
+Gauss–Newton 后线性方程：
+$$
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+M_4\big(\tfrac{\delta N}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta N}{\delta\phi}\big)^\star\Big)\,\delta^n\phi
+=-M_4 N^\star\big(\tfrac{\delta N}{\delta\phi}\big)^\star
++M_4\big(\tfrac{\delta N}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta N}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
++\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
+$$
+
+左端隐式算子记 $\mathcal A_N:=M_4\big(\tfrac{\delta N}{\delta\phi}\big)^\star\otimes\big(\tfrac{\delta N}{\delta\phi}\big)^\star$（秩一、半正定）。
+
+##### 体积 $V$
+
+$V=\int_\Omega\phi\,dx$ 为线性泛函，$\tfrac{\delta V}{\delta\phi}=\mathbf 1$（常值场），$\mathrm d^2V=0$，二阶项天然为零、无需丢弃。
+$$
+\boxed{\;
+\Big(\tfrac{3}{2\tau}\mathcal I+M_1\,\mathbf 1\!\otimes\!\mathbf 1\Big)\,\delta^n\phi
+=-M_1(V^\star-v_d)\,\mathbf 1
++M_1\,\mathbf 1\!\otimes\!\mathbf 1[\delta^{n-1}\phi]
++\tfrac1{2\tau}\,\delta^{n-1}\phi
+\;}
+$$
+
+左端隐式算子记 $\mathcal A_V:=M_1\,\mathbf 1\otimes\mathbf 1$（秩一、半正定）。
+
+#### 总线性方程
+
+##### Eyre
+
+**目的**：补一个无条件正定的 $\sigma\mathcal I$，使左端对任意 $\tau$ 正定可逆（允许大步、保稳定）。
+
+**操作**：方程加入 $\sigma(\delta^n\phi-\delta^{n-1}\phi)$（$\sigma>0$）：$\sigma\delta^n\phi$ 入左端（即 $\sigma\mathcal I$），$-\sigma\delta^{n-1}\phi$ 入右端。该项作用在二阶差分 $\delta^n\phi-\delta^{n-1}\phi=O(\tau^2)$ 上，不降精度；稳态时为零，不改不动点。
+
+##### IEQ 线性方程
+
+各项贡献相加（各项小方程中的 $\tfrac{3}{2\tau}\mathcal I$ 是同一时间项，汇总只计一次、不叠加），$\delta^n\phi$ 满足线性方程
 
 $$
 \boxed{\;
 \Big(\tfrac{3}{2\tau}\mathcal I+\sigma\mathcal I
-+\mathcal A^\star_E+\mathcal A^\star_L+\mathcal A^\star_A+\mathcal A^\star_D+\mathcal A^\star_N+\mathcal A^\star_V\Big)\,\delta^n\phi=\mathcal R^n_\phi
++\mathcal A_E+\mathcal A_L+\mathcal A_A+\mathcal A_D+\mathcal A_N+\mathcal A_V\Big)\,\delta^n\phi=\mathcal R^n_\phi
 \;}
 $$
 
@@ -336,40 +436,43 @@ $$
 
 $$
 \begin{aligned}
-\mathcal A^\star_E &= \mathcal G^\star_q\mathcal C^\star_q && \text{弯曲}\\
-\mathcal A^\star_L &= \mathcal G^\star_r\big(\Phi_\eta^\star\,\mathcal C^\star_r\big) && \text{线张力}\\
-\mathcal A^\star_A &= M_2\,e^\star_A\!\otimes\!e^\star_A, & e^\star_A&=\mathcal G^\star_r[r^\star] && \text{面积罚，秩一}\\
-\mathcal A^\star_D &= M_3\,e^\star_D\!\otimes\!e^\star_D, & e^\star_D&=\mathcal G^\star_r[\tanh(\eta^\star/\xi)\,r^\star] && \text{面积差罚，秩一}\\
-\mathcal A^\star_N &= M_4\,e^\star_N\!\otimes\!e^\star_N, & e^\star_N&=\mathcal G^\star_s[s^\star] && \text{正交罚，秩一}\\
-\mathcal A^\star_V &= M_1\,\mathbf 1\!\otimes\!\mathbf 1 && \text{体积罚，秩一}
+\mathcal A_E &= \mathcal G_q\mathcal D_q && \text{弯曲}\\
+\mathcal A_L &= \mathcal G_r\big[\Phi^\star_\eta\,\mathcal D_r\big] && \text{线张力}\\
+\mathcal A_A &= M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star && \text{面积罚，秩一}\\
+\mathcal A_D &= M_3\big(\tfrac{\delta D}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta D}{\delta\phi}\big)^\star && \text{面积差罚，秩一}\\
+\mathcal A_N &= M_4\big(\tfrac{\delta N}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta N}{\delta\phi}\big)^\star && \text{正交罚，秩一}\\
+\mathcal A_V &= M_1\,\mathbf 1\!\otimes\!\mathbf 1 && \text{体积罚，秩一}
 \end{aligned}
 $$
-
-其中正交项的外推算子 $\mathcal C^\star_s[\psi]=\sqrt\epsilon\,\nabla\psi\cdot\nabla\eta^\star$，$\mathcal G^\star_s$ 为 §2.1 正交项变分导数中作用在辅助变量 $s$ 上的算子：
-
-$$
-\mathcal G^\star_s[h]=-\sqrt\epsilon\,\nabla\!\cdot\!(h\,\nabla\eta^\star)
-$$
-
-$\mathcal A^\star_{A,D,N,V}$ 为秩一算子（$u\otimes u$ 型），对称半正定。$\mathcal A^\star_E=\mathcal G^\star_q\mathcal C^\star_q$、$\mathcal A^\star_L=\mathcal G^\star_r(\Phi^\star_\eta\,\mathcal C^\star_r)$ 为 $\mathcal G\mathcal C$ 型复合：$\mathcal G^\star_q$ 恰为 $\mathcal C^\star_q$ 的伴随（$\mathcal C^\star_q=M_a\circ(\epsilon\Delta+M_{g'})$ 中乘子 $M_a,M_{g'}$ 与 $\epsilon\Delta$ 在周期边界下均自伴，故 $(\mathcal C^\star_q)^*=(\epsilon\Delta+M_{g'})\circ M_a=\mathcal G^\star_q$，与 $a$ 是否变系数无关），故 $\mathcal A^\star_E=(\mathcal C^\star_q)^*\mathcal C^\star_q$ 对称半正定；$\mathcal A^\star_L$ 同理，且因 $\Phi^\star_\eta\ge0$ 亦对称半正定。左端整体的可逆性由时间项 $\tfrac3{2\tau}\mathcal I$ 与 $\sigma$ 保证，谱求解见 §5。
 
 **右端 $\mathcal R^n_\phi$。** 由各项回代后留在右端的已知量收集而成。逐项列出：
 
 弯曲、线张力（来自式 (2)、(2′) 中的已知部分）：
 
 $$
-\mathcal R^n_{\phi,E}=-\mathcal G^\star_q\big[\tfrac13(4q^n-q^{n-1})\big]+\tfrac13\mathcal G^\star_q\mathcal C^\star_q[\delta^{n-1}\phi]
+\mathcal R^n_{\phi,E}=-\mathcal G_q\big[\tfrac13(4q^n-q^{n-1})\big]+\tfrac13\mathcal G_q\mathcal D_q[\delta^{n-1}\phi]
 $$
 
 $$
-\mathcal R^n_{\phi,L}=-\mathcal G^\star_r\big[\Phi^\star_\eta\cdot\tfrac13(4r^n-r^{n-1})\big]+\tfrac13\mathcal G^\star_r(\Phi^\star_\eta\mathcal C^\star_r)[\delta^{n-1}\phi]
+\mathcal R^n_{\phi,L}=-\mathcal G_r\big[\Phi^\star_\eta\cdot\tfrac13(4r^n-r^{n-1})\big]+\tfrac13\mathcal G_r\big[\Phi^\star_\eta\,\mathcal D_r[\delta^{n-1}\phi]\big]
 $$
 
-罚项（精确负梯度 + 主项二阶差分的已知半 $\delta^{n-1}\phi$ 部分；$j=1,\dots,4$ 对应 $V,A,D,N$）：
+罚项（每项 = 精确负梯度 + 主项二阶差分的已知半 $\delta^{n-1}\phi$ 部分），$\mathcal R^n_{\phi,P}=\mathcal R^n_{\phi,V}+\mathcal R^n_{\phi,A}+\mathcal R^n_{\phi,D}+\mathcal R^n_{\phi,N}$：
 
 $$
-\mathcal R^n_{\phi,P}=\sum_j\Big(-M_j(C_j^\star-c_j)\big(\tfrac{\delta C_j}{\delta\phi}\big)^\star
-+M_j\big(\tfrac{\delta C_j}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta C_j}{\delta\phi}\big)^\star[\delta^{n-1}\phi]\Big)
+\mathcal R^n_{\phi,V}=-M_1(V^\star-v_d)\,\mathbf 1+M_1\,\mathbf 1\!\otimes\!\mathbf 1[\delta^{n-1}\phi]
+$$
+
+$$
+\mathcal R^n_{\phi,A}=-M_2(A^\star-a_0)\big(\tfrac{\delta A}{\delta\phi}\big)^\star+M_2\big(\tfrac{\delta A}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta A}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
+$$
+
+$$
+\mathcal R^n_{\phi,D}=-M_3(D^\star-a_d)\big(\tfrac{\delta D}{\delta\phi}\big)^\star+M_3\big(\tfrac{\delta D}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta D}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
+$$
+
+$$
+\mathcal R^n_{\phi,N}=-M_4 N^\star\big(\tfrac{\delta N}{\delta\phi}\big)^\star+M_4\big(\tfrac{\delta N}{\delta\phi}\big)^\star\!\otimes\!\big(\tfrac{\delta N}{\delta\phi}\big)^\star[\delta^{n-1}\phi]
 $$
 
 Eyre 稳定项与 BDF2 历史项：
@@ -390,182 +493,390 @@ $$
 +\tfrac1\epsilon\big((\phi^\star)^3-\phi^\star\big)\tanh(\eta^\star/\xi)
 $$
 
-解出 $\delta^n\phi$ 后：$\phi^{n+1}=\phi^n+\delta^n\phi$，并按 §4.3 更新辅助变量。
+$$
+\Big(\tfrac{\delta N}{\delta\phi}\Big)^\star=-\epsilon\nabla\!\cdot\!\big((\nabla\phi^\star\cdot\nabla\eta^\star)\nabla\eta^\star\big)
+$$
 
 ### §4.2 $\eta$-子步
 
-固定 $\phi=\phi^{n+1}$。$\eta^{n+1}$（即 $\delta^n\eta$）满足
+固定 $\phi=\phi^{n+1}$（先更新 $\phi$ 再更新 $\eta$，故 $\eta$-子步中所有 $\phi$ 取新值 $\phi^{n+1}$，$\eta$ 相关系数取外推 $\eta^\star$，$\zeta^\star=(\eta^\star)^2-1$）。BDF2 增量式：
+
+$$
+\frac{3}{2\tau}\,\delta^n\eta=-\frac{\delta\mathcal E_M}{\delta\eta}\Big|^{n+1}+\frac1{2\tau}\,\delta^{n-1}\eta
+$$
+
+弯曲项与 $P$ 项的处理与 $\phi$-子步有明显差异，单独说明；线张力 $L$、面积差 $D$、正交 $N$ 与 §4.1 同构，直接列入总方程。
+
+#### 弯曲项
+
+$E=\tfrac12\|q\|^2$，$\phi$ 冻结使 $q$ 已知，$\eta$ 只在系数 $k(\eta)$ 中。由 §2.2：
+
+$$
+\frac{\delta E}{\delta\eta}=\frac{k'(\eta)}{2k(\eta)}q^2
+$$
+
+取 $n+1$ 层（$\eta\to\eta^\star$、$q\to q^{n+1}$ 均已知），整块为已知源项，直接入右端：
+
+$$
+\frac{3}{2\tau}\,\delta^n\eta=-\underbrace{\frac{k'(\eta^\star)}{2k(\eta^\star)}(q^{n+1})^2}_{\text{已知，入右端}}+\frac1{2\tau}\,\delta^{n-1}\eta+\cdots
+$$
+
+无未知 $\delta^n\eta$，故弯曲项不贡献左端隐式算子（无 $\mathcal B_E$）。
+
+#### $P$ 项
+
+$P=\|p\|^2$（无 $\tfrac12$），$p=\tfrac\xi2|\nabla\eta|^2-\tfrac1{4\xi}(\eta^2-1)^2$，罚项 $\tfrac{M_5}2P^2$ 对 $p$ 四次。演化与重构算子（§3.1）：
+
+$$
+\mathcal D_p[\psi]:=\xi\nabla\eta^\star\cdot\nabla\psi-\tfrac1\xi\eta^\star\zeta^\star\psi,\qquad
+\mathcal G_p[h]:=-\xi\nabla\!\cdot\!(h\nabla\eta^\star)-\tfrac1\xi\eta^\star\zeta^\star h
+$$
+
+梯度 $\dfrac{\delta}{\delta\eta}\big[\tfrac{M_5}2P^2\big]=M_5P\,\dfrac{\delta P}{\delta\eta}$，其中 $\dfrac{\delta P}{\delta\eta}=2\mathcal G_p[p]$（$P$ 无 $\tfrac12$，故系数 $2$），即梯度 $=2M_5P\,\mathcal G_p[p]$。Newton 主项（乘积法则，标量因子求导再带出一个 $\delta P/\delta\eta=2\mathcal G_p[p]$）：
+
+$$
+2M_5\big(2\mathcal G_p[p],\psi\big)\mathcal G_p[p]=4M_5\,\big(\mathcal G_p[p]\otimes\mathcal G_p[p]\big)[\psi]
+$$
+
+取外推 $p^\star$、作用在二阶差分 $\delta^n\eta-\delta^{n-1}\eta$ 上，含 $\delta^n\eta$ 入左端：
+
+$$
+\boxed{\;\mathcal B_P=4M_5\,\mathcal G_p[p^\star]\otimes\mathcal G_p[p^\star]\;}
+$$
+
+（系数 $4M_5$ 中的 $4=2^2$ 源自 $P=\|p\|^2$ 不带 $\tfrac12$；对照正交项 $N=\tfrac12\|s\|^2$ 带 $\tfrac12$，其主项系数为 $M_4$，无 $4$。）精确负梯度 $-2M_5P^\star\mathcal G_p[p^\star]$ 与主项的 $\delta^{n-1}\eta$ 半入右端；二阶项含 $P^\star\ge0$ 与二阶变分，按 Gauss–Newton 丢弃。
+
+#### 总线性方程
+
+各项相加（$\tfrac{3}{2\tau}\mathcal I$ 只计一次），$\delta^n\eta$ 满足
 
 $$
 \boxed{\;
-\Big(\tfrac{3}{2\tau}\mathcal I+\sigma\mathcal I
-+\mathcal B^\star_L+\mathcal B^\star_D+\mathcal B^\star_N+\mathcal B^\star_P\Big)\,\delta^n\eta=\mathcal R^n_\eta
+\Big(\tfrac{3}{2\tau}\mathcal I+\sigma\mathcal I+\mathcal B_L+\mathcal B_D+\mathcal B_N+\mathcal B_P\Big)\,\delta^n\eta=\mathcal R^n_\eta
 \;}
 $$
 
-各隐式算子如下，冻结系数取二阶外推（$W(\phi^{n+1})$ 已是新层精确值，无需外推；$\eta$ 相关系数取 $\eta^\star$）：
+各隐式算子（$\mathcal B_L$ 微分型；$\mathcal B_{D,N,P}$ 秩一）：
 
 $$
 \begin{aligned}
-\mathcal B^\star_L[\psi] &= -\delta\xi\,\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\psi\big)
-+\delta\tfrac1\xi W(\phi^{n+1})\,\zeta^\star\,\psi && \zeta^\star=(\eta^\star)^2-1\\
-\mathcal B^\star_D &= M_3\,f^\star_D\!\otimes\!f^\star_D, & f^\star_D&=\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^\star/\xi)\\
-\mathcal B^\star_N &= M_4\,e^\star_{N\eta}\!\otimes\!e^\star_{N\eta}, & e^\star_{N\eta}&=\mathcal G^\star_{s\eta}[s^{n+1}_{(\phi)}]\\
-\mathcal B^\star_P &= 4M_5\,e^\star_P\!\otimes\!e^\star_P, & e^\star_P&=\mathcal G^\star_p[p^\star]
+\mathcal B_L[\psi]&=-\delta\xi\,\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\psi\big)+\delta\tfrac1\xi W(\phi^{n+1})\,\zeta^\star\,\psi && \text{线张力}\\
+\mathcal B_D&=M_3\,f^\star_D\!\otimes\!f^\star_D, & f^\star_D&=\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^\star/\xi) && \text{面积差}\\
+\mathcal B_N&=M_4\,\big(\mathcal G_{s\eta}[s^{n+1}]\big)\!\otimes\!\big(\mathcal G_{s\eta}[s^{n+1}]\big), & \mathcal G_{s\eta}[h]&=-\sqrt\epsilon\,\nabla\!\cdot\!(h\,\nabla\phi^{n+1}) && \text{正交}\\
+\mathcal B_P&=4M_5\,\mathcal G_p[p^\star]\!\otimes\!\mathcal G_p[p^\star] && \text{剖面}
 \end{aligned}
 $$
 
-$$
-\mathcal G^\star_{s\eta}[h]=-\sqrt\epsilon\,\nabla\!\cdot\!(h\,\nabla\phi^{n+1}),\qquad
-\mathcal G^\star_p[h]=-\xi\,\nabla\!\cdot\!(h\,\nabla\eta^\star)-\tfrac1\xi\eta^\star\zeta^\star\,h
-$$
+其中 $\mathcal B_N$ 的 $s^{n+1}$ 取 $\phi=\phi^{n+1}$、$\eta=\eta^\star$。
 
-$\mathcal B^\star_{D},\mathcal B^\star_N,\mathcal B^\star_P$ 为秩一算子（$u\otimes u$ 型），对称半正定。$\mathcal B^\star_L$ 对称，但其零阶系数 $\delta\tfrac1\xi W(\phi^{n+1})\,\zeta^\star$ 在 $|\eta^\star|<1$（区域大部分）处为负，故 $\mathcal B^\star_L$ **非半正定**；左端整体 $\tfrac3{2\tau}\mathcal I+\sigma\mathcal I+\mathcal B^\star_L$ 的正定性需 $\sigma$ 足够大保证（阈值见 §5.2）。$\mathcal B^\star_L$ 的零阶项取 $\zeta^\star=(\eta^\star)^2-1$ 是 IEQ 式半隐线性化（系数冻结于外推层），非 Newton 雅可比 $3(\eta^\star)^2-1$；二者收敛时一致，此处为格式选择。
-
-**右端 $\mathcal R^n_\eta$。** 各项分两类处理。
-
-*弯曲项* —— $q^{n+1}$ 在 $\phi$-子步已解出，$-\tfrac{k'(\eta^\star)}{2k(\eta^\star)}(q^{n+1})^2$ 整项已知，直接入右端。
-
-*线张力项* —— $L$ 的 $\eta$-依赖全在 $\Phi_\eta(\eta)$（含 $|\nabla\eta|^2$ 与 $(\eta^2-1)^2$），无对应辅助变量（$r$ 只二次化 $W(\phi)$，在 $\eta$-子步不推进）。故 $\mathcal B^\star_L$ 是直接微分算子，按 $\eta^{n+1}=\eta^\star+(\delta^n\eta-\delta^{n-1}\eta)$ 作二阶差分分解：$\mathcal B^\star_L[\eta^{n+1}]=\mathcal B^\star_L[\eta^\star]+\mathcal B^\star_L[\delta^n\eta]-\mathcal B^\star_L[\delta^{n-1}\eta]$。含 $\delta^n\eta$ 的 $\mathcal B^\star_L[\delta^n\eta]$ 入左端，其余入右端：
+右端：
 
 $$
-\mathcal R^n_{\eta,L}=-\mathcal B^\star_L[\eta^\star]+\mathcal B^\star_L[\delta^{n-1}\eta]
-$$
-
-*正交、剖面项* —— 罚项 $\tfrac{M_4}2N^2,\tfrac{M_5}2P^2$ 对 $s,p$ 为四次（$N=\tfrac12\|s\|^2$），故按罚项 Newton 线性化处理，与 §4.1 的 $\mathcal A^\star_N$ 同类、非 $r$ 代入：$\mathcal B^\star_N,\mathcal B^\star_P$ 为秩一主项（其秩一向量 $e^\star_{N\eta}=\mathcal G^\star_{s\eta}[s^{n+1}]$、$e^\star_P=\mathcal G^\star_p[p^\star]$ 取已推进的辅助变量值，$s,p$ 推进见 §4.3），作用在二阶差分 $\delta^n\eta-\delta^{n-1}\eta$ 上，$\delta^{n-1}\eta$ 半与精确负梯度入右端，记 $\mathcal R^n_{\eta,N},\mathcal R^n_{\eta,P}$。
-
-*面积差项* —— 经 $r$ 但 $r$ 在 $\eta$-子步不推进；其 $\eta$-依赖在 $\tanh(\eta/\xi)$ 中，$\mathcal B^\star_D$ 为罚项 Newton 线性化的秩一主项，作用在二阶差分 $\delta^n\eta-\delta^{n-1}\eta$ 上，$\delta^{n-1}\eta$ 半入右端，记 $\mathcal R^n_{\eta,D}$。
-
-*Eyre 与 BDF2 历史* —— $\sigma(\delta^n\eta-\delta^{n-1}\eta)$ 的 $-\sigma\delta^{n-1}\eta$、BDF2 历史 $\tfrac1{2\tau}\delta^{n-1}\eta$ 入右端。
-
-总右端：
-
-$$
-\mathcal R^n_\eta=-\tfrac{k'(\eta^\star)}{2k(\eta^\star)}(q^{n+1})^2
+\mathcal R^n_\eta=-\frac{k'(\eta^\star)}{2k(\eta^\star)}(q^{n+1})^2
 +\mathcal R^n_{\eta,L}+\mathcal R^n_{\eta,D}+\mathcal R^n_{\eta,N}+\mathcal R^n_{\eta,P}
 +\big(\sigma+\tfrac1{2\tau}\big)\delta^{n-1}\eta
 $$
 
-其中各项的旧层精确梯度密度（外推层）记 $\mathcal F^\star_X$（$X\in\{L,D,N,P\}$，即 §2.2 变分导数对应项在外推层取值）：
+其中：
 
 $$
-\begin{aligned}
-\mathcal F^\star_L&=-\delta\xi\,\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\eta^\star\big)+\delta\tfrac1\xi W(\phi^{n+1})\,\eta^\star((\eta^\star)^2-1)\quad\big(=\mathcal B^\star_L[\eta^\star]\big)\\
-\mathcal F^\star_D&=M_3(D^\star-a_d)\,\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^\star/\xi)\\
-\mathcal F^\star_N&=-M_4 N^\star\,\epsilon\,\nabla\!\cdot\!\big((\nabla\phi^{n+1}\cdot\nabla\eta^\star)\nabla\phi^{n+1}\big)\\
-\mathcal F^\star_P&=M_5 P^\star\big(-2\xi\nabla\!\cdot\!(\Pi(\eta^\star)\nabla\eta^\star)-\tfrac2\xi\Pi(\eta^\star)\,\eta^\star((\eta^\star)^2-1)\big)
-\end{aligned}
+\mathcal R^n_{\eta,L}=-\Big(-\delta\xi\nabla\!\cdot\!\big(W(\phi^{n+1})\nabla\eta^\star\big)+\delta\tfrac1\xi W(\phi^{n+1})\,\eta^\star\zeta^\star\Big)+\mathcal B_L[\delta^{n-1}\eta]
 $$
 
-各 $\mathcal R^n_{\eta,X}$ 由"精确负梯度密度 $-\mathcal F^\star_X$"与"该项隐式算子作用在已知增量 $\delta^{n-1}\eta$ 上"组成，结构统一：
-
 $$
-\mathcal R^n_{\eta,X}=-\mathcal F^\star_X+\mathcal B^\star_X[\delta^{n-1}\eta],\qquad X\in\{L,D,N,P\}
+\mathcal R^n_{\eta,D}=-M_3(D^\star-a_d)\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^\star/\xi)+M_3\,f^\star_D\!\otimes\!f^\star_D[\delta^{n-1}\eta]
 $$
 
-其中 $\mathcal B^\star_L$ 为线张力微分算子（此式即上方 $\mathcal R^n_{\eta,L}$，因 $\mathcal F^\star_L=\mathcal B^\star_L[\eta^\star]$），$\mathcal B^\star_{D,N,P}$ 为 §4.2 算子表中的秩一算子。弯曲项 $-\tfrac{k'(\eta^\star)}{2k(\eta^\star)}(q^{n+1})^2$ 用新层 $q^{n+1}$、不属此外推密度，单列于总右端。
+$$
+\mathcal R^n_{\eta,N}=M_4 N^\star\,\epsilon\nabla\!\cdot\!\big((\nabla\phi^{n+1}\cdot\nabla\eta^\star)\nabla\phi^{n+1}\big)+M_4\,\mathcal G_{s\eta}[s^{n+1}]\!\otimes\!\mathcal G_{s\eta}[s^{n+1}][\delta^{n-1}\eta]
+$$
 
-解出 $\delta^n\eta$ 后：$\eta^{n+1}=\eta^n+\delta^n\eta$，按 §4.3 更新辅助变量。
+$$
+\mathcal R^n_{\eta,P}=-2M_5 P^\star\,\mathcal G_p[p^\star]+4M_5\,\mathcal G_p[p^\star]\!\otimes\!\mathcal G_p[p^\star][\delta^{n-1}\eta]
+$$
+
+其中 $f^\star_D=\tfrac1\xi W(\phi^{n+1})\,\mathrm{sech}^2(\eta^\star/\xi)$，$\mathcal G_{s\eta}[h]=-\sqrt\epsilon\,\nabla\!\cdot\!(h\,\nabla\phi^{n+1})$。
+
+$\mathcal B_L$ 对称，但零阶系数 $\delta\tfrac1\xi W(\phi^{n+1})\zeta^\star$ 在 $|\eta^\star|<1$（区域大部分）处为负，故 $\mathcal B_L$ **非半正定**；左端整体正定性需 $\sigma$ 足够大保证（阈值见 §5.2）
 
 ### §4.3 辅助变量的 BDF2 推进
 
-辅助变量按 BDF2 三层公式推进，与场保持同阶：
+辅助变量按 BDF2 三层公式推进，与场同为二阶。推进时机由各辅助变量依赖的场决定：$r$ 只含 $\phi$、$p$ 只含 $\eta$，各更新一次；$q$ 随 $\phi$ 更新一次；$s=\sqrt\epsilon(\nabla\phi\cdot\nabla\eta)$ 同时含 $\phi,\eta$，故在两个子步各更新一次。
 
-$$
-q^{n+1}=\tfrac13\big(4q^n-q^{n-1}\big)+\tfrac{2\tau}3\,\mathcal C^\star_q\Big[\tfrac{\delta^n\phi}{\tau}\Big]_{\text{BDF2}}
-$$
+#### 更新顺序
 
-实用等价形式（由 §3.1 演化恒等式 $q_t=\mathcal C_q[\phi_t]$ 配 BDF2 离散得）：
+一个完整时间步：
 
-$$
-3q^{n+1}-4q^n+q^{n-1}=\mathcal C^\star_q\big[\,3\delta^n\phi-\delta^{n-1}\phi\,\big]
-$$
+```
+φ-子步: 解 δⁿφ ⇒ φⁿ⁺¹
+  └ 用 δⁿφ 更新: qⁿ⁺¹, rⁿ⁺¹, 以及 s 的 φ 贡献 (得中间值 s_(φ))
+η-子步: 解 δⁿη ⇒ ηⁿ⁺¹
+  └ 用 δⁿη 更新: pⁿ⁺¹, 以及 s 的 η 贡献 (由 s_(φ) 得 sⁿ⁺¹)
+```
 
-即
+$s$ 必须两步都推进：只推进一次会缺失另一场变化的贡献，使正交量 $N=\tfrac12\|s\|^2$ 失准。
+
+#### 递推表达式
+
+通式：辅助变量 $f$ 与其所依赖场增量 $\delta^n(\cdot)$ 的 BDF2 推进为 $3f^{n+1}-4f^n+f^{n-1}=\tfrac{df}{dt}\big[3\delta^n(\cdot)-\delta^{n-1}(\cdot)\big]$，即 $f^{n+1}=\tfrac13\big(4f^n-f^{n-1}+\tfrac{df}{dt}[3\delta^n(\cdot)-\delta^{n-1}(\cdot)]\big)$，$\tfrac{df}{dt}$ 取 §3.1 演化算子（系数外推）。逐个写出：
+
+**$q$（$\phi$-子步，用 $\delta^n\phi$）：**
 
 $$
 \boxed{\;
-q^{n+1}=\tfrac13\Big(4q^n-q^{n-1}+\mathcal C^\star_q\big[3\delta^n\phi-\delta^{n-1}\phi\big]\Big)
+q^{n+1}=\tfrac13\Big(4q^n-q^{n-1}+\mathcal D_q\big[3\delta^n\phi-\delta^{n-1}\phi\big]\Big)
 \;}
 $$
 
-$r,s,p$ 同构（把 $\mathcal C^\star_q$ 换成 $\mathcal C^\star_r,\mathcal C^\star_s,\mathcal D^\star_p$，$\delta^n\phi$ 换成对应场增量）。这样辅助变量推进与场推进同为 BDF2 二阶。
+**$r$（$\phi$-子步，用 $\delta^n\phi$）：**
 
-> BDF2 推进需保存两层辅助变量旧值 $q^n,q^{n-1}$（$r,s,p$ 同）。
+$$
+\boxed{\;
+r^{n+1}=\tfrac13\Big(4r^n-r^{n-1}+\mathcal D_r\big[3\delta^n\phi-\delta^{n-1}\phi\big]\Big)
+\;}
+$$
+
+**$p$（$\eta$-子步，用 $\delta^n\eta$）：**
+
+$$
+\boxed{\;
+p^{n+1}=\tfrac13\Big(4p^n-p^{n-1}+\mathcal D_p\big[3\delta^n\eta-\delta^{n-1}\eta\big]\Big)
+\;}
+$$
+
+**$s$（两步推进）。** 先在 $\phi$-子步用 $\delta^n\phi$ 推进 $\phi$ 贡献（$\mathcal D_{s\phi}[\psi]=\sqrt\epsilon\,\nabla\psi\cdot\nabla\eta^\star$）：
+
+$$
+\boxed{\;
+s_{(\phi)}=\tfrac13\Big(4s^n-s^{n-1}+\mathcal D_{s\phi}\big[3\delta^n\phi-\delta^{n-1}\phi\big]\Big)
+\;}
+$$
+
+再在 $\eta$-子步用 $\delta^n\eta$ 推进 $\eta$ 贡献（$\mathcal D_{s\eta}[\psi]=\sqrt\epsilon\,\nabla\phi^{n+1}\cdot\nabla\psi$，$\phi$ 取新值）：
+
+$$
+\boxed{\;
+s^{n+1}=s_{(\phi)}+\tfrac13\mathcal D_{s\eta}\big[3\delta^n\eta-\delta^{n-1}\eta\big]
+\;}
+$$
 
 ---
 
 ## §5 谱空间求解
 
-§4 的隐式算子含变系数：$\phi$-子步中 $\mathcal A^\star_E$ 含 $a(\eta^\star)^2$，$\mathcal A^\star_L$ 含 $\Phi^\star_\eta$、$1/r^\star$、$\nabla\phi^\star$；$\eta$-子步中 $\mathcal B^\star_L$ 含 $W(\phi^{n+1})$。这些系数随空间位置变化。Fourier 谱方法的高效性在于：常系数微分算子（如 $\Delta$）经 FFT 变为各波数 $\mathbf k$ 上的乘子（$\Delta\to-|\mathbf k|^2$），不同波数互不耦合，故可逐波数求逆。但变系数与场逐点相乘，在 Fourier 空间对应不同波数间的卷积——波数被耦合在一起，不能再逐波数独立求逆。下面的劈分策略即把变系数算子拆成"波数可分离的常系数部分（隐式求解）+ 变系数偏差（显式滞后）"。
+### §5.1 FFT 空间离散
 
-### §5.2 劈分：常系数骨架（隐式）+ 余项（显式）
+$$
+\mathcal L\,\delta^n\phi=\mathcal R^n_\phi,\qquad
+\mathcal M\,\delta^n\eta=\mathcal R^n_\eta,
+$$
 
-采用 $(\mathcal O-\mathcal S)$ 残差策略（stabilized semi-implicit / IMEX splitting，标准方法，见 Chen & Shen, *Comput. Phys. Commun.* 108 (1998) 147；Eyre, MRS Proc. 529 (1998)）。对每个含变系数的微分算子 $\mathcal O$，将其劈成常系数骨架 $\mathcal S$（Fourier 谱对角，隐式）与余项 $\mathcal O-\mathcal S$（含全部变系数偏差，显式）。
+线性即原则上可解。§5 要解决的不是可解性，而是如何在每个时间步**高效**解出。周期边界下，场按 Fourier 基展开：
 
-**余项取二阶外推** $\mathrm{Ext}[\phi^n,\phi^{n-1}]$：
+$$
+\phi(x)=\sum_{\mathbf k}\widehat\phi_{\mathbf k}\,e^{\,i\mathbf k\cdot x},\qquad
+\mathbf k\in\tfrac{2\pi}{L}\mathbb Z^3
+$$
+
+微分作用在 $e^{i\mathbf k\cdot x}$ 上化为乘子：
+
+$$
+\nabla\,e^{\,i\mathbf k\cdot x}=i\mathbf k\,e^{\,i\mathbf k\cdot x},\qquad
+\Delta\,e^{\,i\mathbf k\cdot x}=-|\mathbf k|^2\,e^{\,i\mathbf k\cdot x}
+$$
+
+举例：常系数方程 $(\tfrac3{2\tau}-\epsilon\Delta)\phi=B$，两边取 Fourier 系数，$\Delta$ 换成 $-|\mathbf k|^2$，每个波数得一个**标量**方程
+
+$$
+\Big(\tfrac3{2\tau}+\epsilon|\mathbf k|^2\Big)\widehat\phi_{\mathbf k}=\widehat B_{\mathbf k}
+\quad\Longrightarrow\quad
+\widehat\phi_{\mathbf k}=\frac{\widehat B_{\mathbf k}}{\tfrac3{2\tau}+\epsilon|\mathbf k|^2}
+$$
+
+**左端按可解性分两类。** $\mathcal L,\mathcal M$ 由 §4 诸项加和，逐项考察：
+
+- **微分项**：时间项 $\tfrac3{2\tau}\mathcal I$、Eyre $\sigma\mathcal I$、弯曲 $\mathcal A_E$、线张力 $\mathcal A_L$（$\phi$-子步）与 $\mathcal B_L$（$\eta$-子步）。常系数部分在谱空间为乘子、可逐 $\mathbf k$ 除；变系数部分对应卷积、波数耦合，以空间平均取常系数骨架入左端、偏差外推滞后入右端（§5.2）。
+- **秩一罚项**：$\mathcal A_{A,D,N,V}$、$\mathcal B_{D,N,P}$，形如 $u\otimes u$ 的低秩矩阵，采用 Woodbury 处理（§5.3）。
+
+两类合成 §5.4 子步流程。
+
+### §5.2 劈分近似求解
+
+#### 弯曲能方程
+
+弯曲项线性方程，记右端已知量为 $\mathcal R^n_{\phi,E}$：
+
+$$
+\Big(\tfrac3{2\tau}+\sigma+\mathcal G_q\mathcal D_q\Big)\delta^n\phi=\mathcal R^n_{\phi,E}
+$$
+
+弯曲算子 $\mathcal G_q\mathcal D_q$ 含外推冻结的变系数 $a(\eta^\star),g'(\phi^\star)$：
+
+$$
+\mathcal D_q[\psi]=a(\eta^\star)\big(\epsilon\Delta\psi+g'(\phi^\star)\psi\big),\qquad
+\mathcal G_q[h]=\epsilon\Delta\big(a(\eta^\star)h\big)+g'(\phi^\star)a(\eta^\star)h
+$$
+
+复合后逐点形式：
+
+$$
+\mathcal G_q\mathcal D_q\,\delta^n\phi
+=\epsilon\Delta\Big(a(\eta^\star)^2\big(\epsilon\Delta\,\delta^n\phi+g'(\phi^\star)\delta^n\phi\big)\Big)
++g'(\phi^\star)a(\eta^\star)^2\big(\epsilon\Delta\,\delta^n\phi+g'(\phi^\star)\delta^n\phi\big)
+$$
+
+取 FFT，$\Delta\to-|\mathbf k|^2$，逐点积化为卷积 $\widehat{fg}_{\mathbf k}=\sum_{\mathbf k'}\widehat f_{\mathbf k-\mathbf k'}\widehat g_{\mathbf k'}$。记 $u=\widehat{\delta^n\phi}$、$\widehat{a^2}=\widehat{a(\eta^\star)^2}$、$\widehat{g'}=\widehat{g'(\phi^\star)}$，从内层向外逐层代：
+
+内括号 $\epsilon\Delta\,\delta^n\phi+g'(\phi^\star)\delta^n\phi$：
+
+$$
+-\epsilon|\mathbf k|^2 u_{\mathbf k}+\sum_{\mathbf k_1}\widehat{g'}_{\mathbf k-\mathbf k_1}u_{\mathbf k_1}
+$$
+
+乘 $a(\eta^\star)^2$：
+
+$$
+C_{\mathbf k}=\sum_{\mathbf k_2}\widehat{a^2}_{\mathbf k-\mathbf k_2}\Big(-\epsilon|\mathbf k_2|^2 u_{\mathbf k_2}+\sum_{\mathbf k_1}\widehat{g'}_{\mathbf k_2-\mathbf k_1}u_{\mathbf k_1}\Big)
+$$
+
+外层 $\epsilon\Delta(\cdots)+g'(\phi^\star)(\cdots)$ 作用在 $C_{\mathbf k}$ 上，整方程在 FFT 下合写为
+
+$$
+\boxed{\;
+\underbrace{\Big(\tfrac3{2\tau}+\sigma\Big)u_{\mathbf k}}_{\text{常数项，乘子}}
+\;\underbrace{-\,\epsilon|\mathbf k|^2 C_{\mathbf k}+\sum_{\mathbf k_3}\widehat{g'}_{\mathbf k-\mathbf k_3}C_{\mathbf k_3}}_{\mathcal G_q\mathcal D_q\,\delta^n\phi}
+=\widehat{\mathcal R^n_{\phi,E}}_{\mathbf k}
+\;}
+$$
+
+第一项是干净乘子 $(\tfrac3{2\tau}+\sigma)u_{\mathbf k}$。第二项（$\mathcal G_q\mathcal D_q$）中 $\widehat{a^2},\widehat{g'}$ 的卷积令 $\mathbf k_1,\mathbf k_2,\mathbf k_3$ 跑遍全空间，第 $\mathbf k$ 行把全体 $\{u_{\mathbf k'}\}$ 线性混在一起，提不出公因子 $u_{\mathbf k}$，故不能逐 $\mathbf k$ 除。这里提出劈分近似方案：对变系数算子 $\mathcal O=\mathcal G_q\mathcal D_q$，拆常系数骨架 + 余项，余项二阶外推滞后：
 
 $$
 \mathcal O[\phi^{n+1}]=\mathcal S[\phi^{n+1}]+(\mathcal O-\mathcal S)[\phi^{n+1}]
 \approx\mathcal S[\phi^{n+1}]+(\mathcal O-\mathcal S)\big[\mathrm{Ext}[\phi^n,\phi^{n-1}]\big]
 $$
 
-骨架 $\mathcal S[\phi^{n+1}]$ 进 LHS（对角可逆），余项 $-(\mathcal O-\mathcal S)[\mathrm{Ext}[\phi^n,\phi^{n-1}]]$ 滞后入右端。余项以二阶外推估 $n+1$ 层值，使滞后误差为 $O(\tau^2)$，与 BDF2 主格式同阶。
-
-只有微分型算子进骨架（$\phi$-子步的 $\mathcal A^\star_E,\mathcal A^\star_L$，$\eta$-子步的 $\mathcal B^\star_L$）；秩一算子（$\mathcal A^\star_{A,D,N,V}$、$\mathcal B^\star_{D,N,P}$）不进骨架，全部走 Woodbury（§5.3）。
-
-骨架谱符号如下，LHS 时间系数为 $\tfrac3{2\tau}$：
+骨架取空间平均 $\bar a^2=\overline{k(\eta^\star)}/\epsilon$、$\bar g'=\overline{g'(\phi^\star)}$，左端算子连续化简：
 
 $$
-\widehat{\mathcal L}(\mathbf k)=\tfrac{3}{2\tau}+\sigma
-+\bar a^2\big(\epsilon|\mathbf k|^2-\bar g'\big)^2+b_L|\mathbf k|^2
+\begin{aligned}
+\tfrac3{2\tau}+\sigma+\mathcal G_q\mathcal D_q
+&=\tfrac3{2\tau}+\sigma+\mathcal G_q\big[a(\eta^\star)(\epsilon\Delta+g'(\phi^\star))\big]\\
+&=\tfrac3{2\tau}+\sigma+\epsilon\Delta\big(a(\eta^\star)^2(\epsilon\Delta+g'(\phi^\star))\big)+g'(\phi^\star)a(\eta^\star)^2(\epsilon\Delta+g'(\phi^\star))\\
+&\xrightarrow{a\to\bar a,\,g'\to\bar g'}\;\tfrac3{2\tau}+\sigma+\bar a^2(\epsilon\Delta+\bar g')^2\\
+&\xrightarrow{\;\rm FFT,\ \Delta\to-|\mathbf k|^2\;}\;\tfrac3{2\tau}+\sigma+\bar a^2(\epsilon|\mathbf k|^2-\bar g')^2
+\end{aligned}
+$$
+
+骨架入左端、余项入右端，逐 $\mathbf k$ 除：
+
+$$
+\boxed{\;
+\Big(\tfrac3{2\tau}+\sigma+\bar a^2(\epsilon|\mathbf k|^2-\bar g')^2\Big)\widehat{\delta^n\phi}_{\mathbf k}
+=\widehat{\mathcal R^n_{\phi,E}}_{\mathbf k}-\widehat{\big(\mathcal G_q\mathcal D_q-\bar a^2(\epsilon\Delta+\bar g')^2\big)\delta^{n-1}\phi}_{\mathbf k}
+\;}
+$$
+
+记
+
+$$
+\widehat{\mathcal L}_E(\mathbf k):=\tfrac3{2\tau}+\sigma+\bar a^2(\epsilon|\mathbf k|^2-\bar g')^2,\qquad
+\widehat{\mathcal R}_{\mathbf k}:=\widehat{\mathcal R^n_{\phi,E}}_{\mathbf k}-\widehat{\big(\mathcal G_q\mathcal D_q-\bar a^2(\epsilon\Delta+\bar g')^2\big)\delta^{n-1}\phi}_{\mathbf k}
+$$
+
+则 $\widehat{\delta^n\phi}_{\mathbf k}=\widehat{\mathcal R}_{\mathbf k}/\widehat{\mathcal L}_E(\mathbf k)$。
+
+#### 线张力方程
+
+模仿弯曲项，直接给出劈分后的方程。
+
+**$\phi$-子步**（$\mathcal A_L=\mathcal G_r[\Phi^\star_\eta\mathcal D_r]$）：
+$$
+\boxed{\;
+\Big(\tfrac3{2\tau}+\sigma+b_L|\mathbf k|^2\Big)\widehat{\delta^n\phi}_{\mathbf k}
+=\widehat{\mathcal R^n_{\phi,L}}_{\mathbf k}-\widehat{\big(\mathcal A_L-b_L(-\Delta)\big)\delta^{n-1}\phi}_{\mathbf k}
+\;}
 $$
 
 $$
-\widehat{\mathcal M}(\mathbf k)=\tfrac{3}{2\tau}+\sigma
-+\delta\xi\bar W|\mathbf k|^2+\delta\tfrac1\xi\bar W\bar\zeta
+b_L=\epsilon^2\,\overline{\Phi^\star_\eta\,|\nabla\phi^\star|^2/(r^\star)^2}
 $$
 
-其中 $\widehat{\mathcal L}$ 为 $\phi$-子步骨架符号、$\widehat{\mathcal M}$ 为 $\eta$-子步骨架符号。代表常数由变系数取**空间平均**得到：
+其中 $1/(r^\star)^2$ 由 §3 的 $C_0>0$ 保证 $r^\star\ge\sqrt{C_0}$，界面外平坦区 $W\to0$ 不致发散。
+
+**$\eta$-子步**（$\mathcal B_L=-\delta\xi\nabla\!\cdot\!(W(\phi^{n+1})\nabla\cdot)+\delta\tfrac1\xi W(\phi^{n+1})\zeta^\star\cdot$）：
 
 $$
-\bar a^2=\overline{k(\eta^\star)}/\epsilon,\quad
-b_L=\epsilon^2\,\mathrm{rep}\big(\Phi^\star_\eta|\nabla\phi^\star|^2/(r^\star)^2\big),\quad
-\bar W=\overline{W(\phi^{n+1})},\quad\bar\zeta=\overline{(\eta^\star)^2-1}
+\boxed{\;
+\Big(\tfrac3{2\tau}+\sigma+\delta\xi\bar W|\mathbf k|^2+\delta\tfrac1\xi\bar W\bar\zeta\Big)\widehat{\delta^n\eta}_{\mathbf k}
+=\widehat{\mathcal R^n_{\eta,L}}_{\mathbf k}-\widehat{\big(\mathcal B_L-(-\delta\xi\bar W\Delta+\delta\tfrac1\xi\bar W\bar\zeta)\big)\delta^{n-1}\eta}_{\mathbf k}
+\;}
 $$
 
-$\bar g'$ 为 $g'(\phi^\star)$ 的空间平均。代表常数的底层场量在 BDF2 版取二阶外推值 $\phi^\star,\eta^\star$。"取空间平均"这一规则固定，规则算出的数值随当前场每步变化，每步重算 —— 它不是超参数。
-
-正性：$\widehat{\mathcal L}>0$ 对所有 $\mathbf k$ 无条件成立（三项均非负，$\tfrac3{2\tau}+\sigma>0$）；$\widehat{\mathcal M}>0$ 要求 $\sigma>\delta\bar W|\bar\zeta|/\xi-\tfrac3{2\tau}$（零阶项 $\delta\tfrac1\xi\bar W\bar\zeta$ 在 $\bar\zeta<0$ 时为负，由 $\sigma$ 与时间项压住）。
-
-### §5.3 秩一项：Woodbury
-
-体积、面积、面积差、正交罚项的隐式算子是**秩一**的（形如 $u\otimes u$）。§4 的左端整体形如"对角骨架 $\mathcal D$ + 若干秩一修正"，其中 $\mathcal D$ 的符号为 $\widehat{\mathcal L}$（$\phi$-子步）或 $\widehat{\mathcal M}$（$\eta$-子步）。该结构可用 Woodbury 公式**精确**求逆（直接法，非迭代、无近似误差）。
-
-LHS 写成 $\mathcal D+\sum_j\alpha_j u_j u_j^\top$，$\mathcal D$ 对角，$u_j$ 为秩一向量，$\alpha_j\ge0$；记 $U=[u_1,\dots,u_m]$、$\alpha=\mathrm{diag}(\alpha_j)$：
-
 $$
-(\mathcal D+U\alpha U^\top)^{-1}\mathcal R
-=\mathcal D^{-1}\mathcal R-\mathcal D^{-1}U\big(\alpha^{-1}+U^\top\mathcal D^{-1}U\big)^{-1}U^\top\mathcal D^{-1}\mathcal R
+\bar W=\overline{W(\phi^{n+1})},\qquad\bar\zeta=\overline{(\eta^\star)^2-1}
 $$
 
-$\mathcal D^{-1}$ 即逐波数除（FFT 域对角），$(\alpha^{-1}+U^\top\mathcal D^{-1}U)$ 为 $m\times m$ 小稠密矩阵（$m\le4$，约束个数）。每子步代价：$m+1$ 次 FFT-除 + 一个 $m\times m$ 稠密小解。BDF2 不改变此结构，亦不增加 Woodbury 代价。
+零阶项 $\delta\tfrac1\xi\bar W\bar\zeta$ 在 $\bar\zeta<0$（$|\eta^\star|<1$，区域大部）时为负，左端正性需 $\sigma>\delta\bar W|\bar\zeta|/\xi-\tfrac3{2\tau}$。
+
+### §5.3 秩一罚项：Woodbury
+
+罚项算子 $\sum_j M_j\,u_j^\star\otimes u_j^\star$（$u_j^\star\in\{(\tfrac{\delta A}{\delta\phi})^\star,(\tfrac{\delta D}{\delta\phi})^\star,(\tfrac{\delta N}{\delta\phi})^\star,\mathbf 1\}$）作用在 $\delta^n\phi$ 上：
+
+$$
+\Big(\sum_j M_j\,u_j^\star\otimes u_j^\star\Big)\delta^n\phi
+$$
+
+为低秩矩阵，以 Woodbury 公式精确求逆（$\eta$-子步同构，秩一项为 $\mathcal B_{D,N,P}$）。
 
 ### §5.4 求解流程（$\phi$-子步，$\eta$-子步同构）
 
+两类合并，$\phi$-子步谱空间完整方程：
+
+$$
+\boxed{\;
+\begin{aligned}
+&\widehat{\mathcal L}(\mathbf k)\,\widehat{\delta^n\phi}_{\mathbf k}
++\Big[\Big(\sum_j M_j\,u_j^\star\otimes u_j^\star\Big)\delta^n\phi\Big]_{\mathbf k}
+=\widehat{\mathcal R^n_\phi}_{\mathbf k}\\[4pt]
+&\widehat{\mathcal L}(\mathbf k)=\tfrac3{2\tau}+\sigma+\bar a^2(\epsilon|\mathbf k|^2-\bar g')^2+b_L|\mathbf k|^2
+\end{aligned}
+\;}
+$$
+
+其中 $u_j^\star$ 取 $\{(\tfrac{\delta A}{\delta\phi})^\star,(\tfrac{\delta D}{\delta\phi})^\star,(\tfrac{\delta N}{\delta\phi})^\star,\mathbf 1\}$，系数 $M_j$ 依次为 $M_2,M_3,M_4,M_1$。
+
+$\eta$-子步谱空间完整方程：
+
+$$
+\boxed{\;
+\begin{aligned}
+&\widehat{\mathcal M}(\mathbf k)\,\widehat{\delta^n\eta}_{\mathbf k}
++\Big[\big(M_3\,f^\star_D\otimes f^\star_D+M_4\,\mathcal G_{s\eta}[s^{n+1}]\otimes\mathcal G_{s\eta}[s^{n+1}]+4M_5\,\mathcal G_p[p^\star]\otimes\mathcal G_p[p^\star]\big)\delta^n\eta\Big]_{\mathbf k}
+=\widehat{\mathcal R^n_\eta}_{\mathbf k}\\[4pt]
+&\widehat{\mathcal M}(\mathbf k)=\tfrac3{2\tau}+\sigma+\delta\xi\bar W|\mathbf k|^2+\delta\tfrac1\xi\bar W\bar\zeta
+\end{aligned}
+\;}
+$$
+
+两子步左端均为“对角 $\widehat{\mathcal L}$ 或 $\widehat{\mathcal M}$ + 低秩 $\sum M_j u_j^\star\otimes u_j^\star$”：对角部分逐 $\mathbf k$ 除、秩一部分 Woodbury 修正，即精确解出。
+
 ```
-1. 二阶外推: φ★=2φⁿ−φⁿ⁻¹, η★=2ηⁿ−ηⁿ⁻¹, q★,r★,s★,p★ 同
-2. 实空间组装右端 R = −(δE_M/δfield)★ + (1/2τ)δⁿ⁻¹field
-                       （含外推变系数余项 −(O−S)[Ext]）
+1. 二阶外推: φ★=2φⁿ−φⁿ⁻¹, η★=2ηⁿ−ηⁿ⁻¹; q★,r★,s★,p★ 同
+2. 实空间组装右端 R:
+     精确负梯度 −(δE_M/δfield)★
+     + BDF2 历史 (1/2τ)δⁿ⁻¹field + Eyre σ·δⁿ⁻¹field
+     + 变系数余项 −(O−骨架)[δⁿ⁻¹field]   (弯曲/张力)
 3. FFT(R)
-4. 逐波数除 L̂(k)   ⇒ D⁻¹R     （η-子步除 M̂(k)，时间系数 3/2τ）
-5. 对全部秩一项作 Woodbury 修正
-6. IFFT  ⇒ δ ⁿφ
-7. φⁿ⁺¹ = φⁿ + δ ⁿφ
+4. 逐波数除骨架符号 L̂(k)   (η-子步除 M̂(k))
+5. 对全部秩一项作 Woodbury 修正 (§5.3)
+6. IFFT  ⇒ δⁿφ
+7. φⁿ⁺¹ = φⁿ + δⁿφ
 8. 按 §4.3 BDF2 推进 qⁿ⁺¹,rⁿ⁺¹,sⁿ⁺¹（需 qⁿ,qⁿ⁻¹ 两层）
+   注: 此处 sⁿ⁺¹ 仅完成 φ 贡献(中间值), η 贡献待 η-子步补齐(§4.3)
 ```
 
-变系数余项以二阶外推估值，滞后误差为 $O(\tau^2)$；若 $\tau$ 较大使外推不足，可改以 $\widehat{\mathcal L}^{-1}$（或 $\widehat{\mathcal M}^{-1}$）为预条件子，对含余项的完整方程作不动点迭代或 CG 迭代细化，将余项收敛至精确。
+变系数余项以二阶外推估值，滞后误差 $O(\tau^2)$；若 $\tau$ 较大使外推不足，可以骨架符号之逆 $\widehat{\mathcal L}^{-1}$（或 $\widehat{\mathcal M}^{-1}$）为预条件子，对含余项的完整方程作不动点或 CG 迭代细化，将余项收敛至精确。
 
 ---
 
@@ -598,18 +909,18 @@ $\rho$、$M$ 初值、目标容差均为经验量，需实验标定（$\rho$ 大
 （或用更小子步的一阶格式走若干步以控 startup 误差，
   使其不污染整体 O(τ²)）
 
-while 约束残差 > outer_tol and M < M_max:        # continuation
+while 约束残差 > tol and M < M_max:        # continuation
   for n = 1,2,3,... :                            # 内层至稳态，BDF2
     ── φ-子步 (固定 η=η★) ──
       外推 φ★,η★,q★,r★,s★
       组装 §4.1 算子（3/2τ）与 R_φ（含 1/2τ·δⁿ⁻¹φ）
       §5.4 求解 ⇒ δ ⁿφ,  φⁿ⁺¹ = φⁿ + δ ⁿφ
-      §4.3 BDF2 推进 qⁿ⁺¹,rⁿ⁺¹,sⁿ⁺¹
+      §4.3 BDF2 推进 qⁿ⁺¹,rⁿ⁺¹,sⁿ⁺¹   # sⁿ⁺¹ 此步仅 φ 贡献(中间值)
     ── η-子步 (固定 φ=φⁿ⁺¹) ──
       外推 η★,p★
       组装 §4.2 算子（3/2τ）与 R_η（含 1/2τ·δⁿ⁻¹η）
       §5.4 求解 ⇒ δ ⁿη,  ηⁿ⁺¹ = ηⁿ + δ ⁿη
-      §4.3 BDF2 推进 pⁿ⁺¹,sⁿ⁺¹
+      §4.3 BDF2 推进 pⁿ⁺¹,sⁿ⁺¹   # sⁿ⁺¹ 此步补齐 η 贡献, 至此完整
     if ‖δ ⁿφ‖ + ‖δ ⁿη‖ < tol : break             # 内层收敛
   M ← min(ρ·M, M_max)
   若 M 改变: 重做 startup（暖启动 + 一阶走 1 步重建历史）
